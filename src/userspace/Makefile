@@ -21,6 +21,7 @@ all:
 	@$(MAKE) -C bin/rm
 	@$(MAKE) -C bin/touch
 	@$(MAKE) -C bin/uptime
+	@$(MAKE) -C bin/shutdown
 
 clean:
 	@$(MAKE) -C libc clean
@@ -45,5 +46,6 @@ clean:
 	@$(MAKE) -C bin/rm clean
 	@$(MAKE) -C bin/touch clean
 	@$(MAKE) -C bin/uptime clean
+	@$(MAKE) -C bin/shutdown clean
 
 .PHONY: all clean
