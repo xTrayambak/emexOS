@@ -2,14 +2,14 @@ NOTE:
 this is not a complete todo list
 
 [x] fix log system
-[ ] fix slow bootscreen
+[x] fix slow bootscreen
 [ ] fix user_config creates a already written file
 [ ] fix fat32 is not registered
 [ ] implement atapi support
 [x] implement bmp
 [ ] implement png
 [ ] implement mp4
-[ ] implement ahci
+[x] implement ahci
 [x] implement acpi
 [ ] implement apic
 [x] implement a libc
@@ -25,8 +25,8 @@ this is not a complete todo list
 [ ] implement gzip for userspace
 [ ] implement zip for userspace
 [ ] implement cpio for userspace
-[ ] upgrade theme manager
-[ ] upgrade font manager
+[x] upgrade theme manager
+[x] upgrade font manager
 [x] upgrade bootscreen manager
 [ ] port DOOM
 

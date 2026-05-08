@@ -52,6 +52,25 @@ static void side_borders_comp(int wx, int y, int ww)
     comp_set(wx + ww - 1, y, DT_BLACK);
 }
 
+static void blit_win_buf(dt_win_t *w, unsigned int style, int has_title, int wx, int wy)
+{
+    if (!w->buf || w->buf_w <= 0 || w->buf_h <= 0) return;
+
+    int cx, cy;
+
+    if (style & DT_POPUP) {
+        cx = wx + 1;
+        cy = wy + 1;
+    } else if (has_title) {
+        cx = wx + DT_BORDER;
+        cy = wy + DT_TITLE_H + 1;
+    } else {
+        cx = wx + DT_BORDER;
+        cy = wy + DT_BORDER;
+    }
+
+    comp_put_pixels(cx, cy, w->buf_w, w->buf_h, w->buf);
+}
 
 //pubs
 void render_win(dt_win_t *w)
@@ -67,6 +86,10 @@ void render_win(dt_win_t *w)
     int cw = comp_w();
     (void)cw;
 
+    int has_title = !(style & DT_NOTITLE);
+
+    blit_win_buf(w, style, has_title, wx, wy);
+
     if (style & DT_POPUP)
     {
     	// content will be untouched
@@ -81,7 +104,7 @@ void render_win(dt_win_t *w)
         return;
     }
 
-    int has_title = !(style & DT_NOTITLE);
+    //int has_title = !(style & DT_NOTITLE);
     int tw = slen(w->title) * DT_FW;
     int tx = (ww - tw) / 2;
     int sl = tx - 4;

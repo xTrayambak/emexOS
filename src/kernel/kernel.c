@@ -125,31 +125,30 @@ void _start(void)
             printf("no response");
             hcf(); // enable text mode
         }
-
         // Initialize framebuffer graphics
         struct limine_framebuffer *fb = framebuffer_request.response->framebuffers[0];
-        graphics_init(fb);
-        kproc_loader_init();
-        init_bootscreen();
-        fm_init();
-        cmd_init(); //cmdline limine
-        log("::", "finished loading esr\n", _d);
-        //cursor_x = 0;
-        //cursor_y = 0;
+        {
+	        graphics_init(fb);
+	        kproc_loader_init();
+	        init_bootscreen();
+	        fm_init();
+	        cmd_init(); //cmdline limine
+        }
+        log("::", "finished loading essr\n", _d); // emex system start recources
+
         font_scale = 1;
-        //clear(bg());
 
-        BOOTUP_PRINT("\n\n ======================\n", white());
-        BOOTUP_PRINT(" | Welcome to ", white());
-        BOOTUP_PRINT("emexOS", cyan());
-        BOOTUP_PRINT("! |\n", white());
-        BOOTUP_PRINT(" ======================\n\n", white());
-
-        #if BOOTUP_VISUALS == 1
+        #if BOOTUP_VISUALS == 1 // verify screenmode
             log("[BOOT]", "BOOTUP_VISUALS == 1\n", warning);
         #else
             log("[BOOT]", "BOOTUP_VISUALS == 0\n", warning);
         #endif
+
+        BOOTUP_PRINT("\n\n ========================\n", white());
+        BOOTUP_PRINT(" =  Welcome to ", white());
+        BOOTUP_PRINT("emexOS", cyan());
+        BOOTUP_PRINT("!  =\n", white());
+        BOOTUP_PRINT(" ========================\n\n", white());
 
         //actually not needed but maybe later (e.g. for testing themes)
         //draw_rect(10, 10, fb_width - 20, fb_height - 20, blue());

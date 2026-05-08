@@ -51,9 +51,9 @@ static inline DesktopArea desktopContentArea(
 // desktop.createWindow("title", x, y, w, h, DT_WIN);
 typedef struct {
 
-	// register
+    // register
     int  (*createWindow)(
-    	const char *title,
+        const char *title,
         int x, int y, int w, int h,
         unsigned int style
     );
@@ -68,6 +68,10 @@ typedef struct {
 
     // cursor position
     int  (*getCursor)(int *x, int *y);
+
+    // write window pixel buffer (w x h ARGB pixels)
+    void (*winbuf_write)(const unsigned int *pixels, int w, int h);
+
 } Desktop;
 
 extern Desktop desktop; // desktop.

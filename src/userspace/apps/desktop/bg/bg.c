@@ -3,17 +3,20 @@
 #include "../config/cfg.h"
 #include "../../../libs/libbmp/bmp.h"
 #include <stdio.h>
-#include <stdlib.h>
+//#include <stdlib.h>
 
 static bmp_image_t g_bg;
 static int g_bg_loaded = 0;
+
+#define BG_ROW_MAX 4096
+static unsigned int g_row_buf[BG_ROW_MAX];
 
 void bg_init(int w, int h)
 {
     (void)w;
     (void)h;
 
-    const char *path = "/emr/assets/bg_small.bmp";
+    const char *path = BG_PATH;
 
     printf(":: bg: trying to load bg picture from path: %s\n", path);
 
@@ -65,6 +68,8 @@ void bg_draw_full(void)
 {
     int sw = comp_w();
     int sh = comp_h();
+    int x;
+    int y;
 
     if (!g_bg_loaded || !g_bg.pixels) {
         comp_fill(0, 0, sw, sh, DT_BG);
@@ -73,35 +78,29 @@ void bg_draw_full(void)
 
     int bw = g_bg.width;
     int bh = g_bg.height;
+    int rlen = sw < BG_ROW_MAX ? sw : BG_ROW_MAX;
 
-    unsigned int *row = (unsigned int *)malloc(sw * sizeof(unsigned int));
-    if (!row) {
-        comp_fill(0, 0, sw, sh, DT_BG);
-        return;
-    }
+    for (y = 0; y < sh; y++)
+    {
+        int sy = (y * bh) / sh;
 
-    for (int y = 0; y < sh; y++) {
-        int sy = (y * bh) / sh;   // map screen > bmp
-
-        for (int x = 0; x < sw; x++) {
+        for (x = 0; x < rlen; x++)
+        {
             int sx = (x * bw) / sw;
-
-            row[x] = g_bg.pixels[sy * bw + sx];
+            g_row_buf[x] = g_bg.pixels[sy * bw + sx];
         }
 
-        comp_put_pixels(0, y, sw, 1, row);
+        comp_put_pixels(0, y, rlen, 1, g_row_buf);
     }
 
-    free(row);
+    //free(row);
 }
 
 void bg_draw_rect(int x, int y, int w, int h)
 {
     int sw = comp_w();
     int sh = comp_h();
-
-    //printf("[BG] draw_rect called: x=%d y=%d w=%d h=%d\n", x, y, w, h);
-    // with debug output it lags af
+    int dy, dx;
 
     if (!g_bg_loaded || !g_bg.pixels) {
         comp_fill(x, y, w, h, DT_BG);
@@ -110,24 +109,20 @@ void bg_draw_rect(int x, int y, int w, int h)
 
     int bw = g_bg.width;
     int bh = g_bg.height;
+    int rlen = w < BG_ROW_MAX ? w : BG_ROW_MAX;
 
-    unsigned int *row = (unsigned int *)malloc(w * sizeof(unsigned int));
-    if (!row) {
-        comp_fill(x, y, w, h, DT_BG);
-        return;
-    }
-
-    for (int dy = 0; dy < h; dy++) {
+    for (dy = 0; dy < h; dy++)
+    {
         int sy = ((y + dy) * bh) / sh;
 
-        for (int dx = 0; dx < w; dx++) {
+        for (dx = 0; dx < rlen; dx++)
+        {
             int sx = ((x + dx) * bw) / sw;
-
-            row[dx] = g_bg.pixels[sy * bw + sx];
+            g_row_buf[dx] = g_bg.pixels[sy * bw + sx];
         }
 
-        comp_put_pixels(x, y + dy, w, 1, row);
+        comp_put_pixels(x, y + dy, rlen, 1, g_row_buf);
     }
 
-    free(row);
+    //free(row);
 }

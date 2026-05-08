@@ -4,6 +4,8 @@
 #define USERADRESSNUM "kman"
 #define USERPROC "user"
 #define USERSPACE 0x40004000
+#include <kernel/kernel_processes/bootscreen/boot.h>
+#define USER_SCREEN_MODE BS2 /*1 */
 #define USERPRIORITY 200
 
 #define PC_NAME "pc"

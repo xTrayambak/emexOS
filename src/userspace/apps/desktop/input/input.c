@@ -9,10 +9,14 @@ static int g_drag_idx = -1;
 static int g_drag_ox = 0;
 static int g_drag_oy = 0;
 
+//exposed so desktop.c can read the last closed/removed window rect
+drag_info_t g_input_drag_prev;
+
 void input_init(void)
 {
     g_last_btn = 0;
     g_drag_idx = -1;
+    g_input_drag_prev.valid = 0;
 }
 
 void input_frame_begin(input_state_t *is)
@@ -50,9 +54,16 @@ static int handle_one(mouse_event_t *ev, input_state_t *is)
             if (win_hit_close(top_idx, mx, my))
             {
                 dt_win_t *wn = win_get(top_idx);
-                if (wn) { win_remove(wn->pid); }
-                //
-            }else if (win_hit_title(top_idx, mx, my))
+                if (wn) {
+                    g_input_drag_prev.valid = 1;
+                    g_input_drag_prev.pid   = wn->pid;
+                    g_input_drag_prev.wx    = wn->x;
+                    g_input_drag_prev.wy    = wn->y;
+                    g_input_drag_prev.ww    = wn->w;
+                    g_input_drag_prev.wh    = wn->h;
+                    win_remove(wn->pid);
+                }
+            } else if (win_hit_title(top_idx, mx, my))
             {
                 dt_win_t *wn = win_get(top_idx);
                 if (wn && !(wn->style & DT_NOMOVE) && !(wn->style & DT_NOTITLE))

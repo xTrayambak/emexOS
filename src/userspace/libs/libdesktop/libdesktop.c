@@ -8,6 +8,8 @@
 #define DT_DIRTY  "/tmp/dt/dirty"
 #define DT_CURSOR "/tmp/dt/cursor"
 
+#define DT_WBUF_PREFIX "/tmp/dt/wbuf_"
+
 
 static int _slen(const char *s) {
     int n = 0; while (s[n]) n++; return n;
@@ -71,7 +73,7 @@ static void _cmd_append(const char *line)
 
 
 static int _createWindow(
-	const char *title,
+    const char *title,
     int x, int y, int w, int h,
     unsigned int style
 ){
@@ -149,6 +151,35 @@ static int _getCursor(int *x, int *y)
     return 0;
 }
 
+static void _winbuf_write(const unsigned int *pixels, int w, int h)
+{
+    if (!pixels || w <= 0 || h <= 0) return;
+
+    const char *pfx = DT_WBUF_PREFIX;
+    char path[64];
+    int i = 0;
+
+    while (*pfx) path[i++] = *pfx++;
+
+    char pidstr[12];
+    _int_to_str((int)getpid(), pidstr);
+    int j = 0;
+    while (pidstr[j]) path[i++] = pidstr[j++];
+    path[i] = '\0';
+
+    int fd = open(path, O_WRONLY | O_CREAT);
+    if (fd < 0) return;
+
+    int header[2];
+    header[0] = w;
+    header[1] = h;
+    write(fd, header, 8);
+    write(fd, pixels, (unsigned)(w * h * 4));
+    close(fd);
+
+    _markDirty();
+}
+
 // for "desktop."
 Desktop desktop = {
     .createWindow = _createWindow,
@@ -156,4 +187,5 @@ Desktop desktop = {
     .setTitle     = _setTitle,
     .markDirty    = _markDirty,
     .getCursor    = _getCursor,
+    .winbuf_write = _winbuf_write,
 };

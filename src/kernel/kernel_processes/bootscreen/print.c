@@ -102,17 +102,51 @@ static const char *utf8_next_codepoint(const char *p, u32 *codepoint)
     return p + 1;
 }
 
+
+static u32 g_dirty_y0 = 0xFFFFFFFFu;
+static u32 g_dirty_y1 = 0;
+
+static void dirty_reset(void)
+{
+    g_dirty_y0 = 0xFFFFFFFFu;
+    g_dirty_y1 = 0;
+}
+static void dirty_mark(u32 y, u32 h)
+{
+    if (y < g_dirty_y0) g_dirty_y0 = y;
+    u32 end = y + h;
+    if (end > g_dirty_y1) g_dirty_y1 = end;
+}
+static void dirty_flush(void)
+{
+    if (g_dirty_y0 > g_dirty_y1) return;
+    bs_flush_rows(g_dirty_y0, g_dirty_y1 - g_dirty_y0);
+    dirty_reset();
+}
+
+#define BS_GLYPH_ROW_MAX 64
+
+
+static u32 g_scanline[BS_GLYPH_ROW_MAX];
+
 static void putchar_at(u32 codepoint, u32 x, u32 y, u32 color)
 {
     u32 char_width  = fm_get_char_width();
     u32 char_height = fm_get_char_height();
     u32 row_bytes   = fm_get_glyph_row_bytes();
     u32 lsb_left    = fm_get_glyph_lsb_left();
-    u32 pitch_dwords = fb_pitch / 4;
+    //u32 pitch_dwords = fb_pitch / 4;
     u32 bg_color    = bg();
 
     const u8 *glyph = fm_get_glyph_cp(codepoint);
     if (!glyph) return;
+
+    u32 pdw     	= bs_backbuf_pitch_dw();
+    u32 *backbuf = bs_backbuf_get();
+    u32 glyph_w 	= char_width * font_scale;
+    u32 glyph_h 	= char_height * font_scale;
+
+    if (glyph_w > BS_GLYPH_ROW_MAX) glyph_w = BS_GLYPH_ROW_MAX;
 
     for (u32 dy = 0; dy < char_height; dy++)
     {
@@ -129,32 +163,46 @@ static void putchar_at(u32 codepoint, u32 x, u32 y, u32 color)
             return;
         }
 
-        for (u32 sy = 0; sy < font_scale; sy++) {
-            u32 *fb_row = framebuffer + (y + dy * font_scale + sy) * pitch_dwords + x;
-            for (u32 dx = 0; dx < char_width; dx++) {
-                u32 bit_index = lsb_left ? dx : ((char_width - 1u) - dx);
-                u32 pixel_color = (row_bits & (1u << bit_index)) ? color : bg_color;
-                for (u32 sx = 0; sx < font_scale; sx++) {
-                    fb_row[dx * font_scale + sx] = pixel_color;
-                }
-            }
+
+        for (u32 dx = 0; dx < char_width; dx++)
+        {
+            u32 bit_index   	= lsb_left ? dx : ((char_width - 1u) - dx);
+            u32 pixel_color 	= (row_bits & (1u << bit_index)) ? color : bg_color;
+            u32 base        	= dx * font_scale;
+            for (u32 sx = 0; sx < font_scale; sx++) g_scanline[base + sx] = pixel_color;
+        }
+        for (u32 sy = 0; sy < font_scale; sy++)
+        {
+            u32 abs_y = y + dy * font_scale + sy;
+            memcpy(
+                backbuf + abs_y * pdw + x,
+                g_scanline,
+                glyph_w * sizeof(u32)
+            );
         }
     }
+
+    /* shouldnt flush*/
+    dirty_mark(y, glyph_h);
 }
 
-static void bs_scroll(u32 line_height) {
-    u32 fb_h = get_fb_height();
-    u32 pitch_dwords = get_fb_pitch() / 4;
-    u32 *fb = get_framebuffer();
+static void bs_scroll(u32 line_height)
+{
+    u32 fb_h 	= bs_backbuf_height();
+    u32 pdw  	= bs_backbuf_pitch_dw();
+    u32 *buf  = bs_backbuf_get();
 
-    // single memmove shifts the entire framebuffer at once (much faster than row-by-row on real hardware)
-    memmove(fb,
-            fb + line_height * pitch_dwords,
-            (fb_h - line_height) * pitch_dwords * sizeof(u32));
+    memmove(
+    	buf, buf + line_height * pdw,
+        (fb_h - line_height) * pdw * sizeof(u32)
+    );
+    memset(
+    	buf + (fb_h - line_height) * pdw, 0,
+    	line_height * pdw * sizeof(u32)
+    );
+    bs_backbuf_flush_all();
 
-    // clear bottom lines with memset (bg is black = 0)
-    memset(fb + (fb_h - line_height) * pitch_dwords, 0,
-           line_height * pitch_dwords * sizeof(u32));
+    dirty_reset();
 }
 
 static void putcodepoint(u32 codepoint, u32 color)
@@ -219,10 +267,13 @@ static void putcodepoint(u32 codepoint, u32 color)
 void putchar(char c, u32 color)
 {
     putcodepoint((u32)(unsigned char)c, color);
+
+    //dirty_flush();
 }
 
 void string(const char *str, u32 color)
 {
+    dirty_reset();
     const char *p = str;
     while (p && *p) {
         u32 cp = 0;
@@ -230,6 +281,12 @@ void string(const char *str, u32 color)
         if (cp == 0) break;
         putcodepoint(cp, color);
     }
+    /* entire string*/
+    /*
+     * TODO:
+     * copy and move multiple lines up when screen is ful
+     */
+    dirty_flush();
     printf("%s", str); // prints everything from the os terminal to the host-terminal
 }
 

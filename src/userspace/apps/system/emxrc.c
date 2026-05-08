@@ -24,6 +24,7 @@ static char tb[256]; // token result buffer
 #define ELS_NAME "else"
 #define EIF_NAME "endif"
 
+#define CURRENT_SKIP (if_top >= 0 && if_stack[if_top])
 //#define BG " &"
 #define BG ""
 
@@ -88,7 +89,11 @@ int emxrc_parse(const char *path, emxrc_t *out)
     {
         while (*tp == ' ' || *tp == '\t') tp++; // space or tab
         if (*tp == '\n') { tp++; continue; } // new line
-        if (tp[0]=='/' && tp[1]=='/') { skipline(); continue; } // comments
+        if (*tp == '/' && *(tp+1) == '/') //comments
+        {
+            skipline();
+            continue;
+        }
 
         char *kw = tok();
         if (!kw) { skipline(); continue; }
@@ -213,6 +218,8 @@ int emxrc_parse(const char *path, emxrc_t *out)
            	if (var) {
             	strncpy(e->var_name, var, sizeof(e->var_name) - 1);
             }
+
+            out->exec_count++;
         }
         else if (strcmp(kw, ELS_NAME) == 0)
         {
@@ -237,6 +244,8 @@ int emxrc_parse(const char *path, emxrc_t *out)
 
 void emxrc_run(emxrc_t *rc)
 {
+	int if_stack[32];
+	int if_top = -1;
 	//printf("strt emexrc_run");
     for (int i = 0; i < rc->exec_count; i++) {
         emxrc_exec_t *e = &rc->execs[i];
@@ -261,32 +270,34 @@ void emxrc_run(emxrc_t *rc)
         }
         if(e->is_if)
         {
-        	condition = 0;
+            int condition = 0;
 
-	        for (int j = 0; j < rc->var_count; j++)
-	        {
-		        if (strcmp(rc->vars[j].name, e->var_name) == 0)
-	        	{
-					condition = 1;
-					break;
-				}
-	        }
+            for (int j = 0; j < rc->var_count; j++)
+            {
+                if (strcmp(rc->vars[j].name, e->var_name) == 0)
+                {
+                    condition = 1;
+                    break;
+                }
+            }
 
-			skip = !condition;
-			continue;
+            if_top++;
+            if_stack[if_top] = !condition;
+            continue;
         }
         if (e->is_else)
         {
-        	skip = !skip;
-			continue;
+            if (if_top >= 0) { if_stack[if_top] = !if_stack[if_top];}
+            continue;
         }
         if (e->is_endif)
         {
-        	skip = 0;
-			continue;
+            if (if_top >= 0)
+                if_top--;
+            continue;
         }
 
-        if (skip) continue;
+        if (CURRENT_SKIP) continue;
 
         const char *path = NULL;
         emxrc_fmt_t fmt = e->fmt;

@@ -1,3 +1,6 @@
+var gui = 1 // the variable just needs to exist to work
+//var ebl = 1
+
 var lsblk       = ("/bin/lsblk.elf")
 var stinf       = ("/emr/system/system.emx/stinf.elf")
 var desktop     = ("/emr/system/desktop.elf")
@@ -15,19 +18,20 @@ if stinf
 	//exec /emr/system/system.emx/initd.elf
 	//exec /bin/meminfo.elf
 else
-	log("warning: stinf not found")
+	elog("warning: stinf not found")
 endif
 
 wait 3
 
+if gui
+	//print("gui variable found")
+	exec -bg desktop
+	//exec -bg bg_test
+	//exec -bg bg_test
 
-// deactivated the desktop until it works
-exec -bg desktop
-
-//exec -bg bg_test
-//exec -bg bg_test
-
-
-// last things which should happen
-exec login_path
-exec -f"ep" gshell_path
+	exec login_path
+	exec -f"ep" gshell_path
+else
+	//print("gui variable NOT found")
+	exec shell_path
+endif

@@ -1,6 +1,7 @@
 #include "win.h"
 #include "../config/cfg.h"
 #include <string.h>
+#include <stdlib.h>
 
 // window creating
 // the guilui (gui lib) should handle the window content
@@ -14,6 +15,31 @@ static void scopy(char *dst, const char *src, int max)
     int i = 0;
     while (i < max - 1 && src[i]) { dst[i] = src[i]; i++; }
     dst[i] = '\0';
+}
+
+static void compute_home(dt_win_t *w)
+{
+    unsigned int style = w->style;
+    if (style & DT_POPUP) {
+        w->home_cx = w->x + 1;
+        w->home_cy = w->y + 1;
+        w->home_cw = w->w - 2;
+        w->home_ch = w->h - 2;
+    } else if (style & DT_NOTITLE) {
+        w->home_cx = w->x + DT_BORDER;
+        w->home_cy = w->y + DT_BORDER;
+        w->home_cw = w->w - DT_BORDER * 2;
+        w->home_ch = w->h - DT_BORDER * 2;
+    } else {
+        w->home_cx = w->x + DT_BORDER;
+        w->home_cy = w->y + DT_TITLE_H + 1;
+        w->home_cw = w->w - DT_BORDER * 2;
+        w->home_ch = w->h - DT_TITLE_H - 1 - DT_BORDER;
+    }
+    w->orig_cx = w->home_cx;
+    w->orig_cy = w->home_cy;
+    w->orig_cw = w->home_cw;
+    w->orig_ch = w->home_ch;
 }
 
 int win_add(
@@ -36,7 +62,12 @@ int win_add(
             wins[i].focused = 0;
             wins[i].z = z_next++;
 
+            wins[i].buf = NULL;
+            wins[i].buf_w = 0;
+            wins[i].buf_h = 0;
+
             scopy(wins[i].title, title, DT_TITLE_MAX);
+            compute_home(&wins[i]);
 
             win_cnt++;
 
@@ -53,8 +84,34 @@ void win_remove(pid_t pid)
     int i = win_find_pid(pid);
     if (i < 0) return;
 
+    if (wins[i].buf)
+    {
+        free(wins[i].buf);
+        wins[i].buf = NULL;
+        wins[i].buf_w = 0;
+        wins[i].buf_h = 0;
+    }
+
     wins[i].valid = 0;
     win_cnt--;
+}
+
+void win_update_buf(int idx, const unsigned int *pixels, int w, int h)
+{
+    if (idx < 0 || idx >= DT_WIN_MAX || !wins[idx].valid) return;
+    if (!pixels || w <= 0 || h <= 0) return;
+
+    dt_win_t *wn = &wins[idx];
+    int sz = w * h;
+
+    if (!wn->buf) {
+        wn->buf = (unsigned int *)malloc((unsigned)(sz * 4));
+        if (!wn->buf) return;
+        wn->buf_w = w;
+        wn->buf_h = h;
+    }
+
+    if (wn->buf_w == w && wn->buf_h == h) memcpy(wn->buf, pixels, (unsigned)(sz * 4));
 }
 
 void win_set_title(pid_t pid, const char *title)

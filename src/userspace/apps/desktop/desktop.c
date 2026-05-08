@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <stdlib.h>
 #include <sys/ioctl.h>
 
 #include "config/cfg.h"
@@ -14,6 +15,9 @@
 
 #include <emx/fb.h>
 
+#define DT_WBUF_PREFIX "/tmp/dt/wbuf_"
+
+extern drag_info_t g_input_drag_prev;
 
 static int _slen(const char *s)
 {
@@ -39,10 +43,14 @@ static void _itoa(int v, char *out)
     if (neg) v = -v;
     while (v)
     {
-    	tmp[i++] = '0' + v % 10; v /= 10;
+    	tmp[i++] = '0' + v % 10;
+        v /= 10;
     }
     if (neg) tmp[i++] = '-';
-    while (i > 0) out[j++] = tmp[--i]; out[j] = '\0';
+    while (i > 0) {
+        out[j++] = tmp[--i];
+    }
+    out[j] = '\0';
 }
 
 static void write_cursor_pos(int x, int y)
@@ -54,7 +62,8 @@ static void write_cursor_pos(int x, int y)
     int j = 0;
     int fd = open(DT_CURSOR, O_WRONLY | O_CREAT);
 
-    _itoa(x, xs); _itoa(y, ys);
+    _itoa(x, xs);
+    _itoa(y, ys);
 
     while (xs[j]) buf[i++] = xs[j++];
     buf[i++] = ' ';
@@ -68,6 +77,191 @@ static void write_cursor_pos(int x, int y)
     if (fd >= 0) { write(fd, buf, (unsigned)_slen(buf)); close(fd); }
 }
 
+static void current_content(
+    dt_win_t *w,
+    int *cx, int *cy, int *cw, int *ch
+) {
+    unsigned int s = w->style;
+    if (s & DT_POPUP) {
+        *cx = w->x + 1;
+        *cy = w->y + 1;
+        *cw = w->w - 2;
+        *ch = w->h - 2;
+    } else if (s & DT_NOTITLE) {
+        *cx = w->x + DT_BORDER;
+        *cy = w->y + DT_BORDER;
+        *cw = w->w - DT_BORDER * 2;
+        *ch = w->h - DT_BORDER * 2;
+    } else {
+        *cx = w->x + DT_BORDER;
+        *cy = w->y + DT_TITLE_H + 1;
+        *cw = w->w - DT_BORDER * 2;
+        *ch = w->h - DT_TITLE_H - 1 - DT_BORDER;
+    }
+}
+
+static void _old_full_rect(
+    dt_win_t *w, int hcx, int hcy, int hcw, int hch,
+    int *ox, int *oy, int *ow, int *oh
+){
+    unsigned int s = w->style;
+    if (s & DT_POPUP) {
+        *ox = hcx - 1;
+        *oy = hcy - 1;
+        *ow = hcw + 2;
+        *oh = hch + 2;
+    } else if (s & DT_NOTITLE) {
+        *ox = hcx - DT_BORDER;
+        *oy = hcy - DT_BORDER;
+        *ow = hcw + DT_BORDER * 2;
+        *oh = hch + DT_BORDER * 2;
+    } else {
+        *ox = hcx - DT_BORDER;
+        *oy = hcy - DT_TITLE_H - 1;
+        *ow = hcw + DT_BORDER * 2;
+        *oh = hch + DT_TITLE_H + 1 + DT_BORDER;
+    }
+}
+
+static void sync_home_to_current(void)
+{
+    int i;
+    for (i = 0; i < DT_WIN_MAX; i++)
+    {
+        dt_win_t *w = win_get(i);
+        if (!w) continue;
+
+        int cx, cy, cw, ch;
+        current_content(w, &cx, &cy, &cw, &ch);
+
+        // if window hasn't moved, home == current, nothing to do
+        if (cx == w->home_cx && cy == w->home_cy) continue;
+
+        comp_copy_rect(
+            w->home_cx, w->home_cy,
+            cx, cy,
+            w->home_cw, w->home_ch
+        );
+
+        int ox, oy, ow, oh;
+        _old_full_rect(
+            w, w->home_cx, w->home_cy, w->home_cw, w->home_ch,
+            &ox, &oy, &ow, &oh
+        );
+        int nox, noy, now_, noh;
+        _old_full_rect(w, cx, cy, cw, ch, &nox, &noy, &now_, &noh);
+        {
+            int ix0 = ox > nox ? ox : nox;
+            int iy0 = oy > noy ? oy : noy;
+            int ix1 = (ox+ow)<(nox+now_) ? (ox+ow) : (nox+now_);
+            int iy1 = (oy+oh)<(noy+noh) ? (oy+oh) : (noy+noh);
+            if (ix0 >= ix1 || iy0 >= iy1) {
+                bg_draw_rect(ox, oy, ow, oh);
+            } else {
+                if (oy < iy0)
+                    bg_draw_rect(ox, oy, ow, iy0-oy);
+                if (oy+oh > iy1)
+                    bg_draw_rect(ox, iy1, ow, (oy+oh)-iy1);
+                if (iy0 < iy1) {
+                    if (ox < ix0)
+                        bg_draw_rect(ox, iy0, ix0-ox, iy1-iy0);
+                    if (ox+ow > ix1)
+                        bg_draw_rect(ix1, iy0, (ox+ow)-ix1, iy1-iy0);
+                }
+            }
+        }
+
+        w->home_cx = cx;
+        w->home_cy = cy;
+        w->home_cw = cw;
+        w->home_ch = ch;
+    }
+}
+
+static void clear_closed_windows(void)
+{
+    if (!g_input_drag_prev.valid) return;
+    bg_draw_rect(
+        g_input_drag_prev.wx,
+        g_input_drag_prev.wy,
+        g_input_drag_prev.ww,
+        g_input_drag_prev.wh
+    );
+    g_input_drag_prev.valid = 0;
+}
+
+static void clear_cmd_rects(cmd_result_t *cr)
+{
+    int i;
+    for (i = 0; i < cr->count; i++)
+    {
+        drag_info_t *d = &cr->rects[i];
+        if (d->valid) bg_draw_rect(d->wx, d->wy, d->ww, d->wh);
+    }
+}
+
+static void _build_wbuf_path(char *out, pid_t pid)
+{
+    const char *pfx = DT_WBUF_PREFIX;
+    int i = 0;
+    while (*pfx) out[i++] = *pfx++;
+    char tmp[12];
+    int ti = 0;
+    unsigned int p = (unsigned int)pid;
+    if (!p) { tmp[ti++] = '0'; }
+    else { while (p) { tmp[ti++] = '0' + p % 10; p /= 10; } }
+    while (ti > 0) out[i++] = tmp[--ti];
+    out[i] = '\0';
+}
+
+static int _read_exact_d(int fd, void *buf, int n)
+{
+    unsigned char *p = (unsigned char *)buf;
+    int rem = n;
+    while (rem > 0)
+    {
+        int r = (int)read(fd, p, (unsigned)rem);
+        if (r <= 0) return -1;
+        p += r;
+        rem -= r;
+    }
+    return 0;
+}
+
+static void refresh_win_bufs(void)
+{
+    char path[64];
+    int header[2];
+    int i;
+
+    for (i = 0; i < DT_WIN_MAX; i++) {
+        dt_win_t *wn = win_get(i);
+        if (!wn) continue;
+
+        _build_wbuf_path(path, wn->pid);
+
+        int fd = open(path, O_RDONLY);
+        if (fd < 0) continue;
+
+        if (_read_exact_d(fd, header, 8) != 0) { close(fd); continue; }
+
+        int bw = header[0], bh = header[1];
+        if (bw <= 0 || bh <= 0 || bw > 4096 || bh > 4096) { close(fd); continue; }
+
+        // allocate
+        if (!wn->buf) {
+            wn->buf = (unsigned int *)malloc((unsigned)(bw * bh * 4));
+            if (!wn->buf) { close(fd); continue; }
+            wn->buf_w = bw;
+            wn->buf_h = bh;
+        }
+
+        // read directly into existing buffer, skip on size mismatch
+        if (wn->buf_w == bw && wn->buf_h == bh) _read_exact_d(fd, wn->buf, bw * bh * 4);
+
+        close(fd);
+    }
+}
 
 int main(void)
 {
@@ -99,36 +293,77 @@ int main(void)
     cur_init(fb, scr_w, scr_h);
     input_init();
 
-    input_state_t is;
+    bg_draw_full();
+    comp_flush();
 
+    input_state_t is;
     is.cx = scr_w / 2;
     is.cy = scr_h / 2;
 
     is.win_changed = 0;
 
+    cur_draw_fb(is.cx, is.cy);
     write_cursor_pos(is.cx, is.cy);
+
+    int poll_tick = 0;
+
+    #define POLL_INTERVAL 4
 
     for (;;)
     {
+        int need_full = 0;
+        int need_cur  = 0;
+
         cmd_result_t cr;
+        cr.count = 0;
         cr.win_changed = 0;
+
+        poll_tick++;
+
+        int app_dirty = 0;
+        if (poll_tick >= POLL_INTERVAL)
+        {
+            poll_tick = 0;
+            cmd_process(&cr);
+            if (cr.win_changed) need_full = 1;
+            app_dirty = cmd_check_dirty();
+            if (app_dirty) need_full = 1;
+        }
 
         input_frame_begin(&is);
 
         if (input_drain(mfd, &is))
         {
+            need_cur = 1;
             write_cursor_pos(is.cx, is.cy);
         }
-        is.win_changed = 0;
+        if (is.win_changed)
+        {
+            need_full = 1;
+            is.win_changed = 0;
+        }
 
-        cmd_process(&cr);
+        if (need_full)
+        {
+            if (app_dirty) refresh_win_bufs();
+            comp_capture();
+            cur_undo_from_backbuf();
+            sync_home_to_current();
+            clear_cmd_rects(&cr);
+            clear_closed_windows();
+            render_all();
+            cur_bake(is.cx, is.cy);
+            comp_flush();
+        } else if (need_cur)
+        {
+            cur_erase_fb();
+            cur_draw_fb(is.cx, is.cy);
+        }
 
-        bg_draw_full();
-        render_all();
-        cur_bake(is.cx, is.cy);
-        comp_flush();
-
-        for (volatile int i = 0; i < 500; i++)
-            __asm__ volatile("pause");
+        if (!need_full && !need_cur)
+        {
+            for (volatile int i = 0; i < 500; i++)
+                __asm__ volatile("pause");
+        }
     }
 }

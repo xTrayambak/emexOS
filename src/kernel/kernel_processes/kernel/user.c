@@ -1,5 +1,7 @@
 #include "gen.h"
 #include "../shells/shells.h"
+#include "../bootscreen/boot.h"
+
 #include <kernel/include/assembly.h>
 #include <kernel/packages/emex/emex.h>
 
@@ -36,6 +38,7 @@ void uproc(void) {
 
         //first clear screen
         clear(0xff000000);
+        bs_switch(USER_SCREEN_MODE);
 
         dump_kprocesses();
         proc_list_procs(proc_mgr);

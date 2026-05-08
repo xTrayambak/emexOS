@@ -1,9 +1,5 @@
 #include "tty.h"
-#include <kernel/graph/graphics.h>
-#include <kernel/graph/theme.h>
-#include <kernel/kernel_processes/fm/fm.h>
-#include <kernel/kernel_processes/bootscreen/console/console.h>
-#include <kernel/kernel_processes/bootscreen/boot.h>
+#include "tty_render.h"
 #include <kernel/file_systems/vfs/vfs.h>
 #include <drivers/ps2/keyboard/keyboard.h>
 #include <memory/main.h>
@@ -40,6 +36,17 @@ static u32 tty_ansi_color(int code)
         case 97: return 0xFFFFFFFF;
         default: return 0xFFFFFFFF;
     }
+}
+
+static void tty_buf_push(tty_t *t, u8 cmd, char c, u32 fg, u32 bg)
+{
+    if (t->out_count >= TTY_OUT_BUF_SIZE) return;
+    t->out_buf[t->out_tail].cmd    = cmd;
+    t->out_buf[t->out_tail].c    = c;
+    t->out_buf[t->out_tail].fg    = fg;
+    t->out_buf[t->out_tail].bg    = bg;
+    t->out_tail = (t->out_tail + 1) % TTY_OUT_BUF_SIZE;
+    t->out_count++;
 }
 
 void tty_init(void)
@@ -79,16 +86,12 @@ tty_t *tty_get(int id)
 
 void tty_save_cursor(int id)
 {
-    if (id < 0 || id >= TTY_COUNT) return;
-    tty_table[id].cursor_x = bs_get_active()->cursor_x;
-    tty_table[id].cursor_y = bs_get_active()->cursor_y;
+    (void)id;
 }
 
 void tty_restore_cursor(int id)
 {
-    if (id < 0 || id >= TTY_COUNT) return;
-    bs_get_active()->cursor_x = tty_table[id].cursor_x;
-    bs_get_active()->cursor_y = tty_table[id].cursor_y;
+    (void)id;
 }
 
 void tty_set_echo(int id, int mode)
@@ -110,7 +113,7 @@ void tty_write_char(int id, char c)
     tty_t *t = tty_get(id);
     if (!t) return;
 
-    char tmp[2] = { c, '\0' };
+    //char tmp[2] = { c, '\0' };
 
     switch (t->ansi_state)
     {
@@ -118,19 +121,9 @@ void tty_write_char(int id, char c)
             if (c == '\033') {
                 t->ansi_state = TTY_ANSI_ESC;
             } else if (c == '\b') {
-                u32 char_width  = fm_get_char_width()  * font_scale;
-                u32 char_height = fm_get_char_height() * font_scale;
-                if (bs_get_active()->cursor_x >= char_width)
-                {
-                    bs_get_active()->cursor_x -= char_width;
-                    #if TTYNOGUI == 1
-                    	draw_rect(bs_get_active()->cursor_x, bs_get_active()->cursor_y, char_width, char_height, t->ansi_bg);
-                    #endif
-                }
+                tty_buf_push(t, TTY_CELL_BACKSPACE, '\b', t->ansi_fg, t->ansi_bg);
             } else {
-            	#if TTYNOGUI == 1
-                	cprintf(tmp, t->ansi_fg);
-                #endif
+                tty_buf_push(t, TTY_CELL_CHAR, c, t->ansi_fg, t->ansi_bg);
             }
             break;
 
@@ -142,8 +135,8 @@ void tty_write_char(int id, char c)
                 t->ansi_private = 0;
             } else {
 	            #if TTYNOGUI == 1
-	                cprintf("\033", t->ansi_fg);
-	                cprintf(tmp,t->ansi_fg);
+		            tty_buf_push(t, TTY_CELL_CHAR, '\033' , t->ansi_fg, t->ansi_bg);
+		            tty_buf_push(t, TTY_CELL_CHAR, c , t->ansi_fg, t->ansi_bg);
 	            #endif
                 t->ansi_state = TTY_ANSI_NORMAL;
             }
@@ -205,13 +198,12 @@ void tty_write_char(int id, char c)
                 t->ansi_param_count = 0;
                 t->ansi_state = TTY_ANSI_NORMAL;
             } else if (c == 'J') {
-                if (t->ansi_param == 2) clear(bg());
+                if (t->ansi_param == 2)tty_buf_push(t, TTY_CELL_CLEAR, 0, t->ansi_fg, t->ansi_bg);
                 t->ansi_param = 0;
                 t->ansi_private = 0;
                 t->ansi_state = TTY_ANSI_NORMAL;
             } else if (c == 'H') {
-                bs_get_active()->cursor_x = 0;
-                bs_get_active()->cursor_y = 0;
+                tty_buf_push(t, TTY_CELL_HOME, 0, 0, 0);
                 t->ansi_param = 0;
                 t->ansi_state = TTY_ANSI_NORMAL;
             } else if (c == 'l') {
@@ -229,6 +221,19 @@ void tty_write_char(int id, char c)
             }
             break;
     }
+}
+
+int tty_read_output(int id, tty_cell_t *buf, int max)
+{
+    if (id < 0 || id >= TTY_COUNT) return 0;
+    tty_t *t = &tty_table[id];
+    int n = 0;
+    while (n < max && t->out_count > 0) {
+        buf[n++] = t->out_buf[t->out_head];
+        t->out_head = (t->out_head + 1) % TTY_OUT_BUF_SIZE;
+        t->out_count--;
+    }
+    return n;
 }
 
 int tty_dev_read(int id, void *buf, size_t count)
@@ -290,23 +295,29 @@ int tty_dev_read(int id, void *buf, size_t count)
 
         if (c == '\n' || c == '\r') {
             tty_write_char(id, '\n');
+            tty_flush(id);
             out[i++] = '\n';
             break;
         }
         if (c == '\b') {
             if (i > 0) {
                 i--;
-                if (t->echo_mode != TTY_NOECHO)
+                if (t->echo_mode != TTY_NOECHO) {
                     tty_write_char(id, '\b');
+                    tty_flush(id);
+                }
             }
             continue;
         }
         if (c < 0x20 || c > 0x7E) continue;
 
-        if (t->echo_mode == TTY_ECHO)
+        if (t->echo_mode == TTY_ECHO) {
             tty_write_char(id, c);
-        else if (t->echo_mode == TTY_MASKECHO)
+            tty_flush(id);
+        } else if (t->echo_mode == TTY_MASKECHO) {
             tty_write_char(id, '*');
+            tty_flush(id);
+        }
 
         out[i++] = c;
     }

@@ -6,6 +6,13 @@
 
 typedef struct
 {
+    int valid;
+    pid_t pid;
+    int wx, wy, ww, wh;
+} drag_info_t;
+
+typedef struct
+{
     int cx, cy;
     int win_changed;
 } input_state_t;
