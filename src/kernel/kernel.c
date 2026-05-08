@@ -100,6 +100,7 @@ klime_t *klime = NULL;
 #if ENABLE_ATA
     #include <drivers/storage/ata/disk.h>
 #endif
+#include <drivers/storage/ahci/ahci.h>
 
 
 // limine modules
@@ -267,6 +268,7 @@ void _start(void)
         timer_set_boot_time(); //for uptime command
 
         pci_init();
+        ahci_init();
         //pci will get really useful with xhci/other usb
 
         fs_system_init(klime);

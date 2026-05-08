@@ -70,12 +70,15 @@ typedef enum {
     ATA_DEVICE_PATA,
     ATA_DEVICE_SATA,
     ATA_DEVICE_PATAPI,
-    ATA_DEVICE_SATAPI
+    ATA_DEVICE_SATAPI,
+    ATA_DEVICE_AHCI
 } ATAdevice_type_t;
 typedef struct {
     u16 	base_port;        // base io port (0x1F0 or 0x170)
     u16 	control_port;     // control port (0x3F6 or 0x376)
     u8 		is_slave;          // 0 = master, 1 = slave
+    u8      ahci_port;         // AHCI port number
+    void*   ahci_port_base;    // AHCI port MMIO base
     ATAdevice_type_t 	type;// type of devise
     u32 	capabilities;     // Device capabilities
     char 	model[41];       // Model string
@@ -114,6 +117,8 @@ void ata_init(void);
 int ATAdetect_devices(void);
 ATAdevice_t* ATAget_device(int index);
 int ATAget_device_count(void);
+
+int ATAregister_ahci_device(u8 port, void* port_base, const char* model, u64 sectors);
 
 int ATAread_sectors(ATAdevice_t *dev, u64 lba, u8 sector_count, u16 *buffer);
 int ATAwrite_sectors(ATAdevice_t *dev, u64 lba, u8 sector_count, u16 *buffer);

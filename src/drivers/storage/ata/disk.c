@@ -1,6 +1,9 @@
 #include "disk.h"
 #include "ide.h"
 #include <kernel/include/ports.h>
+#include <kernel/include/reqs.h>
+#include <kernel/mem/paging/paging.h>
+#include <drivers/storage/ahci/ahci.h>
 #include <memory/main.h>
 #include <string/string.h>
 #include <theme/stdclrs.h>
@@ -308,6 +311,22 @@ int ATAdetect_devices(void)
     return ATAdevice_count;
 }
 
+int ATAregister_ahci_device(u8 port, void* port_base, const char* model, u64 sectors) {
+    if (ATAdevice_count >= MAX_ATA_DEVICES) return -1;
+    
+    ATAdevice_t *dev = &ATAdevices[ATAdevice_count];
+    memset(dev, 0, sizeof(ATAdevice_t));
+    dev->type = ATA_DEVICE_AHCI;
+    dev->ahci_port = port;
+    dev->ahci_port_base = port_base;
+    dev->sectors = sectors;
+    str_copy(dev->model, model);
+    dev->lba48_supported = 1;
+
+    ATAdevice_count++;
+    return 0;
+}
+
 // LBA28 read sector
 int ATAread_sectors(ATAdevice_t *dev, u64 lba, u8 sector_count, u16 *buffer)
 {
@@ -317,6 +336,15 @@ int ATAread_sectors(ATAdevice_t *dev, u64 lba, u8 sector_count, u16 *buffer)
         log("[ATA]", "Invalid device\n", error);
         return -1;
     }
+
+    if (dev->type == ATA_DEVICE_AHCI) {
+        u64 phys = virt_to_phys(hhdm_request.response, buffer);
+        if (ahci_read((u8*)dev->ahci_port_base, lba, sector_count, phys)) {
+            return 0;
+        }
+        return -1;
+    }
+
     if (sector_count == 0) {
         log("[ATA]", "Zero sectors requested\n", error);
         return -1;
@@ -403,6 +431,15 @@ int ATAwrite_sectors(ATAdevice_t *dev, u64 lba, u8 sector_count, u16 *buffer)
     if (!dev || dev->type == ATA_DEVICE_NONE) {
         return -1;
     }
+
+    if (dev->type == ATA_DEVICE_AHCI) {
+        u64 phys = virt_to_phys(hhdm_request.response, buffer);
+        if (ahci_write((u8*)dev->ahci_port_base, lba, sector_count, phys)) {
+            return 0;
+        }
+        return -1;
+    }
+
     if (sector_count == 0) {
         return -1;
     }
