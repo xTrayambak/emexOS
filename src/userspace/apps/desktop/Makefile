@@ -7,13 +7,13 @@ CFLAGS := -ffreestanding -nostdlib -fno-builtin -fno-stack-protector \
           -fno-PIE -fno-pic -m64 -march=x86-64 -mno-sse -mno-sse2    \
           -mno-mmx -mno-red-zone -Wall -Wextra -std=gnu11            \
           -I$(LIBC)/include                                          \
-          -I$(LIBS_D)/font8x12                                       \
+          -I$(LIBS_D)/libfont                                        \
           -I$(LIBS_D)/libbmp                                         \
           -I$(LIBS_D)/emxfb0
 
 LDFLAGS := -nostdlib -static -no-pie -T ../../user.ld
 
-LIBS := $(LIBS_D)/font8x12/libfont8x12.a  \
+LIBS := $(LIBS_D)/libfont/libfont.a       \
         $(LIBS_D)/libbmp/libbmp.a         \
         $(LIBS_D)/emxfb0/libemxfb0.a
 

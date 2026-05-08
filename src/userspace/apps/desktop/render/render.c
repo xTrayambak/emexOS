@@ -2,7 +2,7 @@
 #include "../compositor/comp.h"
 #include "../config/cfg.h"
 #include "../win/win.h"
-#include "../../../libs/font8x12/font8x12.h"
+#include "../../../libs/libfont/libfont.h"
 
 #define ROW_MAX 4096
 static unsigned int row_buf[ROW_MAX];
@@ -18,7 +18,7 @@ static unsigned int stripe(int y, int focused)
 
 static void buf_char(int bx, char c, unsigned int fg, unsigned int bg, int frow)
 {
-    unsigned int bits = font8x12_glyph((unsigned char)c & 0x7Fu, frow);
+    uint16_t bits = font_glyph(FONT8X12, (unsigned char)c & 0x7Fu, frow);
 
     for (int col = 0; col < DT_FW; col++)
     {

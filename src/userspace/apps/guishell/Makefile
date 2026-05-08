@@ -8,16 +8,14 @@ CFLAGS  := -ffreestanding -nostdlib -fno-builtin -fno-stack-protector \
            -mno-mmx -mno-red-zone -Wall -Wextra -std=gnu11             \
            -I$(LIBC)/include          \
            -I$(LIBS_D)/libdesktop     \
-           -I$(LIBS_D)/font8x12       \
-           -I$(LIBS_D)/eXui           \
-           -I$(LIBS_D)/emxfb0
+           -I$(LIBS_D)/libfont        \
+           -I$(LIBS_D)/eXui
 
 LDFLAGS := -nostdlib -static -no-pie -T ../../user.ld
 
 LIBS    := $(LIBS_D)/eXui/libexui.a           \
            $(LIBS_D)/libdesktop/libdesktop.a  \
-           $(LIBS_D)/font8x12/libfont8x12.a   \
-           $(LIBS_D)/emxfb0/libemxfb0.a
+           $(LIBS_D)/libfont/libfont.a
 
 all: libs clean shelly.emx/app.elf
 
@@ -32,8 +30,7 @@ $(LIBC)/build/crt0.o $(LIBC)/build/libc.a:
 	$(MAKE) -C $(LIBC)
 
 libs:
-	$(MAKE) -C $(LIBS_D)/emxfb0
-	$(MAKE) -C $(LIBS_D)/font8x12
+	$(MAKE) -C $(LIBS_D)/libfont
 	$(MAKE) -C $(LIBS_D)/libdesktop
 	$(MAKE) -C $(LIBS_D)/eXui
 

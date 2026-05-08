@@ -7,15 +7,15 @@ CFLAGS := -ffreestanding -nostdlib -fno-builtin -fno-stack-protector \
           -mno-mmx -mno-red-zone -Wall -Wextra -std=gnu11            \
           -I$(LIBC)/include
 
-all: libfont8x12.a
+all: libfont.a
 
-libfont8x12.a: font8x12.o
+libfont.a: libfont.o
 	$(AR) rcs $@ $^
 
-font8x12.o: font8x12.c font8x12.h data.h
+libfont.o: libfont.c libfont.h data/font8x12.h data/font8x12_bold.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f *.o libfont8x12.a
+	rm -f *.o libfont.a
 
 .PHONY: all clean
