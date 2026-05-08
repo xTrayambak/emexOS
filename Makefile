@@ -188,5 +188,6 @@ $(BUILD_DIR)/%.asm.o: %.asm
 clean:
 	@echo "[CLR] Cleaning..."
 	@rm -rf $(BUILD_DIR)
+	@$(MAKE) -C src/userspace clean
 #@rm $(DISK_DIR)/disk.img
 	@echo "[OK]"
