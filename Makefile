@@ -174,25 +174,6 @@ run_disk:
 run_usb: $(ISO)
 	@chmod +x run_xhci.sh
 	./run_xhci.sh
-
-run_ahci: $(ISO) dsk/sata_disk.img
-	@echo "[QEMU] booting with AHCI..."
-	@qemu-system-x86_64 \
-		-M pc \
-		-cpu qemu64 \
-		-m 2048 \
-		-drive if=pflash,format=raw,readonly=on,file=uefi/OVMF_CODE.fd \
-		-drive if=pflash,format=raw,file=uefi/OVMF_VARS.fd \
-		-device ahci,id=ahci0 \
-		-drive file=dsk/sata_disk.img,if=none,id=drive1,format=raw \
-		-device ide-hd,drive=drive1,bus=ahci0.0 \
-		-cdrom $< \
-		-serial stdio 2>&1
-
-dsk/sata_disk.img:
-	@mkdir -p $(DISK_DIR)
-	@qemu-img create -f raw $@ 512M
-	@echo "[DISK] created $@"
 # Compilation rules
 $(BUILD_DIR)/%.c.o: %.c
 	@mkdir -p $(dir $@)
@@ -207,5 +188,6 @@ $(BUILD_DIR)/%.asm.o: %.asm
 clean:
 	@echo "[CLR] Cleaning..."
 	@rm -rf $(BUILD_DIR)
+	@$(MAKE) -C src/userspace clean
 #@rm $(DISK_DIR)/disk.img
 	@echo "[OK]"
