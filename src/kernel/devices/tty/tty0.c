@@ -38,7 +38,7 @@ static int tty0_dev_write(void *handle, const void *buf, size_t count, u64 offse
     (void)handle; (void)offset;
     const char *p = (const char *)buf;
     for (size_t i = 0; i < count; i++) tty_write_char(0, p[i]);
-    //tty_flush(0);
+    tty_flush(0);
     return (int)count;
 }
 

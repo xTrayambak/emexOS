@@ -1,4 +1,5 @@
 #include "vad.h"
+#include "exui.h"
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -7,7 +8,13 @@
 // def. 256color ARGB
 // entries: 0xAARRGGBB
 // 00 is transparent (0x)
+static unsigned int _bg_color = 0xFF000000u;
 
+void vad_set_bg(unsigned int color) {
+    _bg_color = color;
+}
+
+// default 256 color palette, same as before
 static unsigned int _default_palette[VAD_PALETTE_SIZE] = {
     /* 0x00 */ 0x00000000u,  /* transparent  */
 
@@ -275,24 +282,23 @@ void vad_free(vad_image_t *img)
     img->width = img->height = 0;
 }
 
-void vad_draw(draw_ctx *ctx, const vad_image_t *img, int x, int y)
+// exui handles that nnow
+void vad_draw(const vad_image_t *img, int x, int y)
 {
-    vad_draw_ex(ctx, img, x, y, 0, 0, -1, 0, 255);
+    vad_draw_ex(img, x, y, 0, 0, -1, 0, 255);
 }
 
-void vad_draw_scaled(
-	draw_ctx *ctx, const vad_image_t *img,
-   	int x, int y, int w, int h)
+void vad_draw_scaled(const vad_image_t *img, int x, int y, int w, int h)
 {
-    vad_draw_ex(ctx, img, x, y, w, h, -1, 0, 255);
+    vad_draw_ex(img, x, y, w, h, -1, 0, 255);
 }
 
 void vad_draw_ex(
-	draw_ctx *ctx, const vad_image_t *img,
+    const vad_image_t *img,
     int x, int y, int w, int h,
     int sat, int bright, int alpha
 ){
-    if (!ctx || !img || !img->pixels) return;
+    if (!img || !img->pixels) return;
     if (alpha == 0) return;
 
     int src_w = img->width;
@@ -304,16 +310,10 @@ void vad_draw_ex(
 
     for (int dy = 0; dy < dst_h; dy++)
     {
-        int abs_y = y + dy;
-        if (abs_y < 0 || abs_y >= ctx->h) continue;
-
         int sy = (dst_h > 1) ? (dy * (src_h - 1) / (dst_h - 1)) : 0;
         if (sy >= src_h) sy = src_h - 1;
 
-        int row_len = dst_w;
-        if (row_len > DS_ROW_BUF_W) row_len = DS_ROW_BUF_W;
-
-        for (int dx = 0; dx < row_len; dx++)
+        for (int dx = 0; dx < dst_w; dx++)
         {
             int sx = (dst_w > 1) ? (dx * (src_w - 1) / (dst_w - 1)) : 0;
             if (sx >= src_w) sx = src_w - 1;
@@ -322,10 +322,12 @@ void vad_draw_ex(
 
             if (has_fx) pix = _apply_fx(pix, sat, bright, alpha);
 
-            ctx->row_buf[dx] = pix;
+            // palette index 0 is transparent, use bg color
+            if ((pix >> 24) == 0) exui.DrawPixel(x + dx, y + dy, _bg_color);
+            else exui.DrawPixel(x + dx, y + dy, pix);
         }
 
-        ds_blit_row(ctx, x, abs_y, row_len);
+        //ds_blit_row(ctx, x, abs_y, row_len);
     }
 
 }

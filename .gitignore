@@ -16,6 +16,8 @@ tools/old
 tools/png
 tools/bmp
 tools/lg.py
+tools/vad
+tools/vad.py
 
 .github/*
 

@@ -18,7 +18,7 @@ static unsigned int stripe(int y, int focused)
 
 static void buf_char(int bx, char c, unsigned int fg, unsigned int bg, int frow)
 {
-    uint16_t bits = font_glyph(FONT8X12, (unsigned char)c & 0x7Fu, frow);
+    uint16_t bits = font_glyph(FONT8X12_BOLD, (unsigned char)c & 0x7Fu, frow);
 
     for (int col = 0; col < DT_FW; col++)
     {

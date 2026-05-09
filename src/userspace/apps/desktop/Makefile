@@ -45,7 +45,7 @@ $(LIBC)/build/crt0.o $(LIBC)/build/libc.a:
 
 libs:
 	$(MAKE) -C $(LIBS_D)/emxfb0
-	$(MAKE) -C $(LIBS_D)/font8x12
+	$(MAKE) -C $(LIBS_D)/libfont
 	$(MAKE) -C $(LIBS_D)/libbmp
 
 clean:

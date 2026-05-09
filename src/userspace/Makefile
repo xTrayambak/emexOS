@@ -12,6 +12,7 @@ all:
 	@$(MAKE) -C apps/guishell
 	@$(MAKE) -C apps/login
 	@$(MAKE) -C apps/desktop
+	@$(MAKE) -C apps/sysinfo
 
 	@$(MAKE) -C bin/echo
 	@$(MAKE) -C bin/hello
@@ -46,6 +47,7 @@ clean:
 	@$(MAKE) -C apps/guishell clean
 	@$(MAKE) -C apps/login clean
 	@$(MAKE) -C apps/desktop clean
+	@$(MAKE) -C apps/sysinfo clean
 
 	@$(MAKE) -C bin/echo clean
 	@$(MAKE) -C bin/hello clean

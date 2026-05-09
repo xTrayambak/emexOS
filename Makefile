@@ -8,7 +8,7 @@ SRCS = $(shell find $(SRC_DIR) shared \
 	\( -name "*.c" -o -name "*.cpp" -o -name "*.asm" \) -print)
 OBJS = $(SRCS:%=$(BUILD_DIR)/%.o)
 
-.PHONY: all fetchDeps run clean
+.PHONY: all fetchDeps run clean binclean
 all: $(ISO)
 
 # Fetch dependencies/libraries
@@ -87,11 +87,12 @@ $(ISO): limine.conf $(LIMINE_TOOL) buildgen $(BUILD_DIR)/kernel.elf disk userspa
 	@cp -r src/userspace/apps/system/system.emx $(DISK_DIR)/rd/emr/system/
 	@cp -r src/userspace/apps/system/stinf/stinf.elf $(DISK_DIR)/rd/emr/system/system.emx
 	@cp -r src/userspace/apps/desktop/desktop.elf $(DISK_DIR)/rd/emr/system/
+	@cp -r src/userspace/apps/sysinfo/sysinfo.elf $(DISK_DIR)/rd/emr/system/
 
 	@echo "[MK] copying other binarys..."
+	# delete those using make binclean
 	@cp src/userspace/apps/login/login.elf $(DISK_DIR)/rd/emr/system/
 	@cp src/userspace/bin/hello/hello.elf $(DISK_DIR)/rd/bin/
-	@cp src/userspace/bin/sinfo/sinfo.elf $(DISK_DIR)/rd/emr/system/
 	@cp src/userspace/bin/touch/touch.elf $(DISK_DIR)/rd/bin/
 	@cp src/userspace/bin/uname/uname.elf $(DISK_DIR)/rd/bin/
 	@cp src/userspace/bin/initd/initd.elf $(DISK_DIR)/rd/emr/system/system.emx/
@@ -109,11 +110,11 @@ $(ISO): limine.conf $(LIMINE_TOOL) buildgen $(BUILD_DIR)/kernel.elf disk userspa
 	@cp src/userspace/bin/meminfo/meminfo.elf $(DISK_DIR)/rd/bin/
 	@cp src/userspace/bin/dofetch/dofetch.elf $(DISK_DIR)/rd/bin/
 
-	@echo "[MK] copying libs..."
-	@cp src/userspace/libs/cursor/cursor.elf $(DISK_DIR)/rd/emr/system/libraries
-	@cp src/userspace/libs/emxfb0/libemxfb0.a $(DISK_DIR)/rd/emr/system/libraries/
-	@cp src/userspace/libs/font8x12/libfont8x12.a $(DISK_DIR)/rd/emr/system/libraries/
-	@cp src/userspace/libs/libdesktop/libdesktop.a $(DISK_DIR)/rd/emr/system/libraries/
+# libs arent copied anymore due merge conflicts in prs
+#@echo "[MK] copying libs..."
+#@cp src/userspace/libs/libfont/libfont.a $(DISK_DIR)/rd/emr/system/libraries/
+#@cp src/userspace/libs/emxfb0/libemxfb0.a $(DISK_DIR)/rd/emr/system/libraries/
+#@cp src/userspace/libs/libdesktop/libdesktop.a $(DISK_DIR)/rd/emr/system/libraries/
 
 
 	@echo "[MK] creating initrd.cpio..."
@@ -184,10 +185,36 @@ $(BUILD_DIR)/%.cpp.o: %.cpp
 $(BUILD_DIR)/%.asm.o: %.asm
 	@mkdir -p $(dir $@)
 	$(VAS) $(ASFLAGS) $< -o $@
+
 # Clean all build output
 clean:
 	@echo "[CLR] Cleaning..."
 	@rm -rf $(BUILD_DIR)
 	@$(MAKE) -C src/userspace clean
+
+
+binclean:
+	@echo "[BINCLEAN] Removing compiled binaries from dsk/..."
+	@rm -f  $(DISK_DIR)/initrd.cpio
+	@rm -f  $(DISK_DIR)/initrdh.cpio
+	@rm -rf $(DISK_DIR)/rd/bin
+#@rm -rf $(DISK_DIR)/rdh/user_id/apps
+#@rm -rf $(DISK_DIR)/rdh/user_id/bin
+	@rm -rf $(DISK_DIR)/rd/emr/system/shell.emx/app.elf
+	@rm -rf $(DISK_DIR)/rd/emr/system/shelly.emx/app.elf
+	@rm -rf $(DISK_DIR)/rd/emr/system/system.emx/app.elf
+	@rm -f  $(DISK_DIR)/rd/emr/system/system.emx/stinf.elf
+	@rm -f  $(DISK_DIR)/rd/emr/system/system.emx/initd.elf
+	@rm -f  $(DISK_DIR)/rd/emr/system/desktop.elf
+	@rm -f  $(DISK_DIR)/rd/emr/system/login.elf
+	@rm -f  $(DISK_DIR)/rd/emr/system/libraries/cursor.elf
+	@rm -f  $(DISK_DIR)/rd/emr/system/libraries/libemxfb0.a
+	@rm -f  $(DISK_DIR)/rd/emr/system/libraries/libfont8x12.a
+	@rm -f  $(DISK_DIR)/rd/emr/system/libraries/libdesktop.a
+	@mkdir -p $(DISK_DIR)/rd/bin
+#@mkdir -p $(DISK_DIR)/rdh/user_id/apps
+#@mkdir -p $(DISK_DIR)/rdh/user_id/bin
+	@echo "[OK] binclean done"
+
 #@rm $(DISK_DIR)/disk.img
 	@echo "[OK]"

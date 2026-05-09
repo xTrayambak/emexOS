@@ -6,6 +6,7 @@
 #include "libdesktop.h"
 #include "exui.h"
 #include "login.h"
+#include "vad.h"
 
 #define LOGIN_W   300
 #define LOGIN_H   164
@@ -24,8 +25,6 @@
 #define PASSWORD "password: "
 //#define MAX_TRIES 3
 //#define BUF_SIZE 64
-char log_user[MAX_TRIES][BUF_SIZE];
-char log_pass[MAX_TRIES][BUF_SIZE];
 
 #define KBD_PATH "/dev/input/keyboard0"
 
@@ -40,6 +39,13 @@ char log_pass[MAX_TRIES][BUF_SIZE];
 //#define FW FONT8X12_W
 //#define FH FONT8X12_H
 
+#define ICON_PATH "/emr/system/desktop/icons/user1.vad"
+
+// icon size, make sure it fits inside the window height
+// content area is LOGIN_H minus the titlebar (~18px) and border (~2px)
+// so roughly 144px tall, 48 fits easily
+#define ICON_SIZE 40
+
 typedef struct {
     unsigned int keycode;
     unsigned int modifiers;
@@ -51,6 +57,8 @@ char log_pass[MAX_TRIES][BUF_SIZE];
 
 static int g_kbd = -1;
 static DesktopArea ca;
+static vad_image_t g_icon;
+static int g_has_icon = 0;
 
 static void draw_login(exui_inputbox_t *user_state, exui_inputbox_t *pass_state, const char *msg, int field)
 {
@@ -62,16 +70,29 @@ static void draw_login(exui_inputbox_t *user_state, exui_inputbox_t *pass_state,
     int fh  = font_h(FONT);
     int bw  = ca.w - LOGIN_PAD * 2;
 
-    exui.Clear(LG_BG);
+    exui.Clear(LG_WHITE);
 
-    exui.Print(cx, cy, "username:", LG_FG, LG_BG, FONT);
+    // draw icon top right, clamped so it cant go outside the buffer
+    if (g_has_icon) {
+        int ix = ca.w - ICON_SIZE - LOGIN_PAD;
+        int iy = (ca.h - ICON_SIZE) / 2;
+        if (ix < 0) ix = 0;
+        if (iy < 0) iy = 0;
+        // make sure the icon stays within bounds
+        if (ix + ICON_SIZE <= ca.w && iy + ICON_SIZE <= ca.h) {
+            vad_set_bg(LG_WHITE);
+            vad_draw_scaled(&g_icon, ix, iy, ICON_SIZE, ICON_SIZE);
+        }
+    }
+
+    exui.Print(cx, cy, "username:", LG_FG, LG_WHITE, FONT);
     cy += fh + 3;
-    exui.InputBox(cx, cy, bw, user_state, LG_FG, LG_BLACK, field == 0 ? LG_FOCUSED : LG_BLACK, FONT, 0);
+    exui.InputBox(cx, cy, bw, user_state, LG_FG, LG_BG, field == 0 ? LG_FOCUSED : LG_BLACK, FONT, 0);
     cy += fh + 6 + 6;
 
-    exui.Print(cx, cy, "password:", LG_FG, LG_BG, FONT);
+    exui.Print(cx, cy, "password:", LG_FG, LG_WHITE, FONT);
     cy += fh + 3;
-    exui.InputBox(cx, cy, bw, pass_state, LG_FG, LG_BLACK, field == 1 ? LG_FOCUSED : LG_BLACK, FONT, 0);
+    exui.InputBox(cx, cy, bw, pass_state, LG_FG, LG_BG, field == 1 ? LG_FOCUSED : LG_BLACK, FONT, 0);
     cy += fh + 6 + 6;
 
     if (msg && msg[0]) exui.Print(cx, cy, msg, LG_ERR, LG_BG, FONT);
@@ -101,6 +122,12 @@ int main(void)
     desktop.createWindow(APPTITLE, win_x, win_y, LOGIN_W, LOGIN_H, DT_WIN | DT_NOMOVE);
     ca = desktopContentArea(win_x, win_y, LOGIN_W, LOGIN_H, DT_WIN | DT_NOMOVE);
     exui_init(ca.w, ca.h);
+
+    // load icon after exui_init so the buffer is ready
+    g_has_icon = (vad_load(ICON_PATH, &g_icon) == 0);
+    printf("debug: icon load %s\n", g_has_icon ? "ok" : "failed");
+    if (g_has_icon)
+        printf("debug: icon size %dx%d\n", g_icon.width, g_icon.height);
 
     exui_inputbox_t user_state; memset(&user_state, 0, sizeof(user_state));
     exui_inputbox_t pass_state; memset(&pass_state, 0, sizeof(pass_state));
@@ -133,6 +160,7 @@ int main(void)
             } else {
                 if (str_eq(user_state.buf, LOGIN_USER) && str_eq(pass_state.buf, LOGIN_PASS)) {
                     desktop.closeWindow();
+                    if (g_has_icon) vad_free(&g_icon);
                     return 0;
                 }
                 if (attempts < MAX_TRIES) {
@@ -157,6 +185,7 @@ int main(void)
                         close(fd);
                     }
                     desktop.closeWindow();
+                    if (g_has_icon) vad_free(&g_icon);
                     return 2;
                 }
 

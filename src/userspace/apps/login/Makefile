@@ -9,13 +9,17 @@ CFLAGS  := -ffreestanding -nostdlib -fno-builtin -fno-stack-protector \
            -I$(LIBC)/include          \
            -I$(LIBS_D)/libdesktop     \
            -I$(LIBS_D)/libfont        \
-           -I$(LIBS_D)/eXui
+           -I$(LIBS_D)/eXui           \
+           -I$(LIBS_D)/libvad         \
+           -I$(LIBS_D)/emxfb0
 
 LDFLAGS := -nostdlib -static -no-pie -T ../../user.ld
 
 LIBS    := $(LIBS_D)/eXui/libexui.a           \
            $(LIBS_D)/libdesktop/libdesktop.a  \
-           $(LIBS_D)/libfont/libfont.a
+           $(LIBS_D)/libfont/libfont.a        \
+           $(LIBS_D)/libvad/libvad.a          \
+           $(LIBS_D)/emxfb0/libemxfb0.a
 
 all: libs clean login.elf
 
@@ -32,6 +36,8 @@ libs:
 	$(MAKE) -C $(LIBS_D)/libfont
 	$(MAKE) -C $(LIBS_D)/libdesktop
 	$(MAKE) -C $(LIBS_D)/eXui
+	$(MAKE) -C $(LIBS_D)/libvad
+	$(MAKE) -C $(LIBS_D)/emxfb0
 
 clean:
 	rm -f *.o login.elf
