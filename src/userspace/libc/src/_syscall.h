@@ -1,45 +1,54 @@
 #pragma once
 
-#define _SCAL_READ        		 0
-#define _SCAL_WRITE       		 1
-#define _SCAL_OPEN        		 2
-#define _SCAL_CLOSE       		 3
-#define _SCAL_BRK         		12
-#define _SCAL_GETPID      		39
-#define _SCAL_FORK        		57
-#define _SCAL_EXECVE      		59
-#define _SCAL_EXIT        		60
-#define _SCAL_GETDENTS    		78  // list directory entries (path, buf, max)
-#define _SCAL_GETCWD      		79
-#define _SCAL_CHDIR       		80
-#define _SCAL_MKDIR       		83
-#define _SCAL_UNLINK      		87  // (delete file)
-#define _SCAL_IOCTL     	    16
-#define _SCAL_WAITPID           61
-#define _SCAL_IPC_SEND   	   200
-#define _SCAL_IPC_RECV   	   201
-#define _SCAL_REBOOT    	   169
-#define _SCAL_MOUSE_INIT       250
-#define _SCAL_SYSINFO          170
+#define _SCAL_READ 0
+#define _SCAL_WRITE 1
+#define _SCAL_OPEN 2
+#define _SCAL_CLOSE 3
+#define _SCAL_BRK 12
+#define _SCAL_GETPID 39
+#define _SCAL_FORK 57
+#define _SCAL_EXECVE 59
+#define _SCAL_EXIT 60
+#define _SCAL_GETDENTS 78 // list directory entries (path, buf, max)
+#define _SCAL_GETCWD 79
+#define _SCAL_CHDIR 80
+#define _SCAL_MKDIR 83
+#define _SCAL_UNLINK 87 // (delete file)
+#define _SCAL_IOCTL 16
+#define _SCAL_WAITPID 61
+#define _SCAL_IPC_SEND 200
+#define _SCAL_IPC_RECV 201
+#define _SCAL_REBOOT 169
+#define _SCAL_MOUSE_INIT 250
+#define _SCAL_SYSINFO 170
 
 static inline long _sc0(long n) {
-    long r;
-    __asm__ volatile("syscall":"=a"(r):"a"(n):"rcx","r11","memory");
-    return r;
+  long r;
+  __asm__ volatile("syscall" : "=a"(r) : "a"(n) : "rcx", "r11", "memory");
+  return r;
 }
 
 static inline long _sc1(long n, long a1) {
-    long r;
-    __asm__ volatile("syscall":"=a"(r):"a"(n),"D"(a1):"rcx","r11","memory");
-    return r;
+  long r;
+  __asm__ volatile("syscall"
+                   : "=a"(r)
+                   : "a"(n), "D"(a1)
+                   : "rcx", "r11", "memory");
+  return r;
 }
 static inline long _sc2(long n, long a1, long a2) {
-    long r;
-    __asm__ volatile("syscall":"=a"(r):"a"(n),"D"(a1),"S"(a2):"rcx","r11","memory");
-    return r;
+  long r;
+  __asm__ volatile("syscall"
+                   : "=a"(r)
+                   : "a"(n), "D"(a1), "S"(a2)
+                   : "rcx", "r11", "memory");
+  return r;
 }
 static inline long _sc3(long n, long a1, long a2, long a3) {
-    long r;
-    __asm__ volatile("syscall":"=a"(r):"a"(n),"D"(a1),"S"(a2),"d"(a3):"rcx","r11","memory");
-    return r;
+  long r;
+  __asm__ volatile("syscall"
+                   : "=a"(r)
+                   : "a"(n), "D"(a1), "S"(a2), "d"(a3)
+                   : "rcx", "r11", "memory");
+  return r;
 }

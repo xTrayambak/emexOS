@@ -1,15 +1,16 @@
 #pragma once
 
+#include <kernel/devices/disks/hdd0.h>
 #include <kernel/devices/fb0/fb0.h>
-#include <kernel/devices/tty/tty0.h>
-#include <kernel/devices/random/urandom.h>
-#include <kernel/devices/random/random.h>
 #include <kernel/devices/input/kbd.h>
 #include <kernel/devices/input/mouse0.h>
 #include <kernel/devices/net/eth0.h>
 #include <kernel/devices/null/null.h>
+#include <kernel/devices/random/random.h>
+#include <kernel/devices/random/urandom.h>
+#include <kernel/devices/tty/tty0.h>
 #include <kernel/devices/zero/zero.h>
-#include <kernel/devices/disks/hdd0.h>
+#include <kernel/devices/pty/pty.h>
 
 #define ATANAME "dev_atahdd0"
 #define ATAPATH "/dev/hda"
@@ -55,3 +56,11 @@
 #define RNDNAME "dev_random"
 #define RNDPATH "/dev/random"
 #define RNDUNIVERSAL VERSION_NUM(0, 0, 1, 0)
+
+// PTY (pseudo-terminal)
+#define PTMXNAME "dev_ptmx"
+#define PTMXPATH "/dev/ptmx"
+#define PTMXUNIVERSAL VERSION_NUM(0, 1, 0, 0)
+#define PTS0NAME "dev_pts0"
+#define PTS0PATH "/dev/pts/0"
+#define PTS0UNIVERSAL VERSION_NUM(0, 1, 0, 0)
