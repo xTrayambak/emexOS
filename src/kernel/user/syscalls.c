@@ -20,6 +20,7 @@
 #include <drivers/drivers.h>
 
 #include <kernel/devices/devices.h>
+#include <kernel/devices/tty/tty_render.h>
 
 #include <config/user.h>
 
@@ -185,7 +186,19 @@ u64 scall_write(ulime_proc_t *proc, u64 fd, u64 buf, u64 count) {
   (void)proc;
   if (!is_valid_user_ptr_range(buf, count))
     return (u64)-1;
-  return (u64)fs_write((int)fd, (const void *)buf, (size_t)count);
+
+  ssize_t ret = fs_write((int)fd, (const void *)buf, (size_t)count);
+
+  /* fallback: if stdout/stderr VFS write failed, push to tty0 directly */
+  if (ret < 0 && (fd == 1 || fd == 2)) {
+    const char *p = (const char *)buf;
+    for (size_t i = 0; i < (size_t)count; i++)
+      tty_write_char(0, p[i]);
+    tty_flush(0);
+    return count;
+  }
+
+  return (u64)ret;
 }
 
 u64 scall_exit(ulime_proc_t *proc, u64 exit_code, u64 arg2, u64 arg3) {

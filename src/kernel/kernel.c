@@ -353,6 +353,8 @@ module_ss:
     module_register(&tty1_module);
     module_register(&urandom_module);
     module_register(&random_module);
+    module_register(&ptmx_module);
+    module_register(&pts0_module);
 
     log("[MOD]", "found ", d);
     int count = module_get_count();

@@ -7,10 +7,59 @@
 
 #include <kernel/mem/memlog.h>
 
+#include <kernel/devices/pty/pty.h>
+#include <kernel/file_systems/vfs/vfs.h>
+
 // path to the init app in the VFS (loaded from initrd.cpio)
 #define SYSTEMLOCATE "/emr/system/system.emx"
 //mod
 //#define LOGINLOCATE "/emr/bin/login.elf"
+
+/*
+ * Wire fd 0/1/2:
+ *   fd 0 (stdin)  → /dev/tty0   (keyboard input, for now)
+ *   fd 1 (stdout) → /dev/pts/0  (PTY slave — output goes to ring buffer)
+ *   fd 2 (stderr) → /dev/pts/0  (PTY slave — same)
+ *
+ * The GUI shell (shelly) opens /dev/ptmx to read child output from master.
+ */
+static void setup_stdio(void)
+{
+    /* 1) initialise PTY and allocate pair 0 */
+    pty_init();
+    int pty_idx = pty_alloc();
+    if (pty_idx < 0) {
+        log("[INIT]", "WARN: pty_alloc failed\n", warning);
+    }
+
+    /* 2) stdin fd 0 → /dev/tty0 (keyboard reads still work) */
+    int tty_fd = fs_open("/dev/tty0", O_RDWR);
+    if (tty_fd >= 0) {
+        fs_file *f = fs_get_file(tty_fd);
+        if (f) fs_set_fd(0, f); /* stdin */
+    }
+
+    /* 3) stdout/stderr fd 1,2 → /dev/pts/0 (PTY slave) */
+    int pts_fd = fs_open("/dev/pts/0", O_RDWR);
+    if (pts_fd >= 0) {
+        fs_file *f = fs_get_file(pts_fd);
+        if (f) {
+            fs_set_fd(1, f);   /* stdout → PTY slave */
+            fs_set_fd(2, f);   /* stderr → PTY slave */
+        }
+        log("[INIT]", "stdio: fd0->tty0, fd1/2->pts/0\n", d);
+    } else {
+        /* fallback: wire stdout/stderr to tty0 if PTY not ready */
+        if (tty_fd >= 0) {
+            fs_file *f = fs_get_file(tty_fd);
+            if (f) {
+                fs_set_fd(1, f);
+                fs_set_fd(2, f);
+            }
+        }
+        log("[INIT]", "stdio: fd0/1/2->tty0 (PTY fallback)\n", warning);
+    }
+}
 
 void uproc(void) {
     #if ENABLE_ULIME
@@ -18,6 +67,9 @@ void uproc(void) {
             log("[INIT]", "proc_mgr or ulime not ready\n", error);
             return;
         }
+
+        /* ---- set up stdio BEFORE launching userspace ---- */
+        setup_stdio();
 
         log("[INIT]", "loading " SYSTEMLOCATE "...\n", d);
 

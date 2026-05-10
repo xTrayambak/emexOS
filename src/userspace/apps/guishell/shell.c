@@ -63,6 +63,7 @@ static int t_col = 0;
 static int t_vtop = 0;
 
 static int g_kbd = -1;
+static int g_ptmx = -1;
 static char ibuf[BUFFER];
 static int ilen = 0;
 
@@ -248,6 +249,17 @@ static void run_cmd(void) {
     _exit(127);
   } else if (pid > 0) {
     waitpid(pid, NULL, 0);
+    
+    // Drain child output from PTY master
+    if (g_ptmx >= 0) {
+        char pty_buf[512];
+        int n;
+        while ((n = read(g_ptmx, pty_buf, sizeof(pty_buf) - 1)) > 0) {
+            pty_buf[n] = '\0';
+            buf_puts(pty_buf, CI_FG);
+        }
+    }
+    
     redraw();
   } else {
     buf_puts("fork failed\n", CI_ERR);
@@ -260,6 +272,8 @@ int main(void) {
   g_kbd = open(KBD_PATH, O_RDONLY);
   if (g_kbd < 0)
     return 1;
+    
+  g_ptmx = open("/dev/ptmx", O_RDONLY);
 
   int scr_w = 1280, scr_h = 720;
   int win_x = (scr_w - SHELL_W) / 2;

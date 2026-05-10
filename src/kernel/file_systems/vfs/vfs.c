@@ -59,6 +59,14 @@ fs_file *fs_get_file(int fd) {
   return fds[fd];
 }
 
+// Set a specific fd slot directly (used by PTY to wire fd 0/1/2)
+int fs_set_fd(int fd, fs_file *file) {
+  if (fd < 0 || fd >= FS_MAX_FDS)
+    return -1;
+  fds[fd] = file;
+  return 0;
+}
+
 //
 // type registration
 //

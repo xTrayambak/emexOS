@@ -126,6 +126,7 @@ int fs_addchild(fs_node *parent, fs_node *child);
 int fs_alloc_fd(fs_file *file);
 void fs_free_fd(int fd);
 fs_file *fs_get_file(int fd);
+int fs_set_fd(int fd, fs_file *file); // direct slot assignment (PTY stdio)
 
 // permission check
 int fs_check_perm(fs_node *node, u32 uid, u32 gid, u8 need);
