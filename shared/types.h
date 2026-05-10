@@ -4,7 +4,7 @@
 /*
  * THIS IS ONLY THE KLIBC TYPES.H NOT FOR USERSPACE
  *
-*/
+ */
 
 typedef unsigned char u8;
 typedef unsigned short u16, USHORT;
@@ -29,10 +29,10 @@ typedef i16 int16_t;
 typedef i32 int32_t;
 typedef i64 int64_t;
 
-#define NULL ((void*)0)
+#define NULL ((void *)0)
 
-#define TRUE  1
-#define true  1
+#define TRUE 1
+#define true 1
 
 #define FALSE 0
 #define false 0
