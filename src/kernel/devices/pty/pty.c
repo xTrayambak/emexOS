@@ -6,9 +6,7 @@
 #include <kernel/communication/serial.h>
 #include <theme/doccr.h>
 
-/* ====================================================================
- *  PTY core – ring buffers + master/slave IO
- * ==================================================================== */
+
 
 static pty_pair_t pty_table[PTY_MAX];
 
@@ -46,7 +44,7 @@ pty_pair_t *pty_get(int idx)
     return &pty_table[idx];
 }
 
-/* ---- ring-buffer helpers ---- */
+
 
 static ssize_t ring_write(char *buf, u32 *head, u32 *tail,
                           u32 *count, const char *src, size_t n)
@@ -73,14 +71,14 @@ static ssize_t ring_read(char *buf, u32 *head, u32 *tail,
     return (ssize_t)rd;
 }
 
-/* ---- master side ---- */
+
 
 ssize_t pty_master_read(int idx, void *buf, size_t count)
 {
     pty_pair_t *p = pty_get(idx);
     if (!p) return -1;
 
-    /* read from slave→master buffer (child's stdout) */
+
     return ring_read(p->s2m_buf, &p->s2m_head, &p->s2m_tail,
                      &p->s2m_count, (char *)buf, count);
 }
@@ -90,22 +88,21 @@ ssize_t pty_master_write(int idx, const void *buf, size_t count)
     pty_pair_t *p = pty_get(idx);
     if (!p) return -1;
 
-    /* write into master→slave buffer (will become child's stdin) */
+
     return ring_write(p->m2s_buf, &p->m2s_head, &p->m2s_tail,
                       &p->m2s_count, (const char *)buf, count);
 }
 
-/* ---- slave side ---- */
+
 
 ssize_t pty_slave_read(int idx, void *buf, size_t count)
 {
     pty_pair_t *p = pty_get(idx);
     if (!p) return -1;
 
-    /* slave reads from master→slave buffer (stdin) */
 
-    /* Block until at least one byte is available.
-     * We spin with HLT so the CPU can sleep between interrupts. */
+
+
     while (p->m2s_count == 0) {
         __asm__ volatile("sti");
         __asm__ volatile("hlt");
@@ -121,14 +118,12 @@ ssize_t pty_slave_write(int idx, const void *buf, size_t count)
     pty_pair_t *p = pty_get(idx);
     if (!p) return -1;
 
-    /* slave writes into slave→master buffer (stdout) */
+
     return ring_write(p->s2m_buf, &p->s2m_head, &p->s2m_tail,
                       &p->s2m_count, (const char *)buf, count);
 }
 
-/* ====================================================================
- *  devfs driver glue – /dev/ptmx  (master multiplexer)
- * ==================================================================== */
+
 
 static int ptmx_init_fn(void)
 {
@@ -142,8 +137,7 @@ static void ptmx_fini_fn(void) {}
 static void *ptmx_open_fn(const char *path)
 {
     (void)path;
-    /* If pair 0 is already allocated (by setup_stdio), return its master.
-     * Otherwise allocate a new pair. */
+
     if (pty_table[0].active) {
         pty_table[0].master_open = 1;
         return (void *)(u64)(0 + 1);   /* handle = idx(0) + 1 */
@@ -179,12 +173,7 @@ driver_module ptmx_module = {
     .write   = ptmx_write_fn,
 };
 
-/* ====================================================================
- *  devfs driver glue – /dev/pts/0  (slave endpoint)
- *
- *  For now we only support pts/0.  The "open" handle encodes the
- *  pty index so the same ops work for any pair.
- * ==================================================================== */
+
 
 static int pts0_init_fn(void)
 {
@@ -194,11 +183,11 @@ static int pts0_init_fn(void)
 
 static void pts0_fini_fn(void) {}
 
-/* When a process opens /dev/pts/0 we return handle = (idx+1) for pty 0. */
+
 static void *pts0_open_fn(const char *path)
 {
     (void)path;
-    /* pty pair 0 – the first (and usually only) pair */
+
     if (!pty_table[0].active) return NULL;
     pty_table[0].slave_open++;
     return (void *)1;    /* handle = idx(0) + 1 */
@@ -229,14 +218,9 @@ driver_module pts0_module = {
     .write   = pts0_write_fn,
 };
 
-/* ====================================================================
- *  fd 0/1/2 wiring helpers
- * ==================================================================== */
 
-/*
- * Internal: create an fs_file that points at the pts/0 devfs node and
- * assign it to an exact fd slot (0, 1, or 2).
- */
+
+
 static fs_file *stdio_files[3] = { NULL, NULL, NULL };
 
 static int wire_fd_to_pts(int fd_slot, int pty_idx)
@@ -245,7 +229,7 @@ static int wire_fd_to_pts(int fd_slot, int pty_idx)
 
     /* resolve the pts node in devfs */
     char pts_path[32];
-    /* build "/dev/pts/0" (only idx 0 for now) */
+
     str_copy(pts_path, "/dev/pts/0");
     (void)pty_idx; /* TODO: support >0 */
 
@@ -272,9 +256,7 @@ static int wire_fd_to_pts(int fd_slot, int pty_idx)
         }
     }
 
-    /* Inject directly into the fd table at the given slot.
-     * The VFS exposes fs_get_file / fs_free_fd but not a "set fd"
-     * function, so we cheat through the extern array.               */
+
     extern fs_file *fs_get_file(int fd);
     extern void     fs_free_fd(int fd);
 
@@ -283,8 +265,7 @@ static int wire_fd_to_pts(int fd_slot, int pty_idx)
         fs_free_fd(fd_slot);
     }
 
-    /* We need to poke the fds[] array directly.  It is defined as a
-     * static in vfs.c, but we add a tiny helper there instead.      */
+
     extern int fs_set_fd(int fd, fs_file *f);
     if (fs_set_fd(fd_slot, file) < 0) {
         klime_free((klime_t *)fs_klime, (u64 *)file);
@@ -310,14 +291,13 @@ int pty_attach_slave_fds(int pty_idx)
 
 int pty_open_master(int pty_idx)
 {
-    /* Open /dev/ptmx via VFS – this allocates a normal fd >= 3 */
+
     int fd = fs_open("/dev/ptmx", O_RDWR);
     if (fd < 0) {
         printf("[PTY] pty_open_master: fs_open(/dev/ptmx) failed\n");
         return -1;
     }
-    /* The ptmx_open_fn already allocated a pair; we need to make sure
-     * the handle matches pty_idx.  For idx 0 this is the common case. */
+
     (void)pty_idx;
     return fd;
 }
