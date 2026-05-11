@@ -18,8 +18,10 @@ void pty_init(void)
 
 int pty_alloc(void)
 {
-    for (int i = 0; i < PTY_MAX; i++) {
-        if (!pty_table[i].active) {
+    for (int i = 0; i < PTY_MAX; i++)
+    {
+        if (!pty_table[i].active)
+        {
             memset(&pty_table[i], 0, sizeof(pty_pair_t));
             pty_table[i].active = 1;
             printf("[PTY] allocated pair %d\n", i);
@@ -32,25 +34,27 @@ int pty_alloc(void)
 void pty_free(int idx)
 {
     if (idx < 0 || idx >= PTY_MAX) return;
-    pty_table[idx].active      = 0;
-    pty_table[idx].slave_open  = 0;
-    pty_table[idx].master_open = 0;
+    pty_table[idx].active      	  = 0;
+    pty_table[idx].slave_open  	  = 0;
+    pty_table[idx].master_open 	  = 0;
 }
 
 pty_pair_t *pty_get(int idx)
 {
     if (idx < 0 || idx >= PTY_MAX) return NULL;
-    if (!pty_table[idx].active)    return NULL;
+    if (!pty_table[idx].active) return NULL;
     return &pty_table[idx];
 }
 
 
 
-static ssize_t ring_write(char *buf, u32 *head, u32 *tail,
-                          u32 *count, const char *src, size_t n)
-{
+static ssize_t ring_write(
+	char *buf, u32 *head, u32 *tail,
+    u32 *count, const char *src, size_t n
+){
     size_t written = 0;
-    while (written < n && *count < PTY_BUF_SIZE) {
+    while (written < n && *count < PTY_BUF_SIZE)
+    {
         buf[*tail] = src[written++];
         *tail = (*tail + 1) % PTY_BUF_SIZE;
         (*count)++;
@@ -58,12 +62,14 @@ static ssize_t ring_write(char *buf, u32 *head, u32 *tail,
     return (ssize_t)written;
 }
 
-static ssize_t ring_read(char *buf, u32 *head, u32 *tail,
-                         u32 *count, char *dst, size_t n)
-{
+static ssize_t ring_read(
+	char *buf, u32 *head, u32 *tail,
+    u32 *count, char *dst, size_t n
+){
     (void)tail;
     size_t rd = 0;
-    while (rd < n && *count > 0) {
+    while (rd < n && *count > 0)
+    {
         dst[rd++] = buf[*head];
         *head = (*head + 1) % PTY_BUF_SIZE;
         (*count)--;
@@ -79,8 +85,10 @@ ssize_t pty_master_read(int idx, void *buf, size_t count)
     if (!p) return -1;
 
 
-    return ring_read(p->s2m_buf, &p->s2m_head, &p->s2m_tail,
-                     &p->s2m_count, (char *)buf, count);
+    return ring_read(
+    	p->s2m_buf, &p->s2m_head, &p->s2m_tail,
+        &p->s2m_count, (char *)buf, count
+    );
 }
 
 ssize_t pty_master_write(int idx, const void *buf, size_t count)
@@ -89,27 +97,26 @@ ssize_t pty_master_write(int idx, const void *buf, size_t count)
     if (!p) return -1;
 
 
-    return ring_write(p->m2s_buf, &p->m2s_head, &p->m2s_tail,
-                      &p->m2s_count, (const char *)buf, count);
+    return ring_write(
+    	p->m2s_buf, &p->m2s_head, &p->m2s_tail,
+        &p->m2s_count, (const char *)buf, count
+    );
 }
-
-
 
 ssize_t pty_slave_read(int idx, void *buf, size_t count)
 {
     pty_pair_t *p = pty_get(idx);
     if (!p) return -1;
 
-
-
-
-    while (p->m2s_count == 0) {
+    while (p->m2s_count == 0)
+    {
         __asm__ volatile("sti");
         __asm__ volatile("hlt");
     }
 
-    ssize_t n = ring_read(p->m2s_buf, &p->m2s_head, &p->m2s_tail,
-                          &p->m2s_count, (char *)buf, count);
+    ssize_t n = ring_read(
+    	p->m2s_buf, &p->m2s_head, &p->m2s_tail,
+        &p->m2s_count, (char *)buf, count);
     return n;
 }
 
@@ -119,11 +126,11 @@ ssize_t pty_slave_write(int idx, const void *buf, size_t count)
     if (!p) return -1;
 
 
-    return ring_write(p->s2m_buf, &p->s2m_head, &p->s2m_tail,
-                      &p->s2m_count, (const char *)buf, count);
+    return ring_write(
+    	p->s2m_buf, &p->s2m_head, &p->s2m_tail,
+        &p->s2m_count, (const char *)buf, count
+    );
 }
-
-
 
 static int ptmx_init_fn(void)
 {
@@ -138,7 +145,8 @@ static void *ptmx_open_fn(const char *path)
 {
     (void)path;
 
-    if (pty_table[0].active) {
+    if (pty_table[0].active)
+    {
         pty_table[0].master_open = 1;
         return (void *)(u64)(0 + 1);   /* handle = idx(0) + 1 */
     }
@@ -162,7 +170,8 @@ static int ptmx_write_fn(void *handle, const void *buf, size_t count, u64 offset
     return (int)pty_master_write(idx, buf, count);
 }
 
-driver_module ptmx_module = {
+driver_module ptmx_module =
+{
     .name    = "dev_ptmx",
     .mount   = "/dev/ptmx",
     .version = VERSION_NUM(0, 1, 0, 0),
@@ -207,7 +216,8 @@ static int pts0_write_fn(void *handle, const void *buf, size_t count, u64 offset
     return (int)pty_slave_write(idx, buf, count);
 }
 
-driver_module pts0_module = {
+driver_module pts0_module =
+{
     .name    = "dev_pts0",
     .mount   = "/dev/pts/0",
     .version = VERSION_NUM(0, 1, 0, 0),
@@ -217,8 +227,6 @@ driver_module pts0_module = {
     .read    = pts0_read_fn,
     .write   = pts0_write_fn,
 };
-
-
 
 
 static fs_file *stdio_files[3] = { NULL, NULL, NULL };
@@ -249,8 +257,10 @@ static int wire_fd_to_pts(int fd_slot, int pty_idx)
     file->flags = O_RDWR;
 
     /* open the device */
-    if (node->ops && node->ops->open) {
-        if (node->ops->open(node, file) != 0) {
+    if (node->ops && node->ops->open)
+    {
+        if (node->ops->open(node, file) != 0)
+        {
             klime_free((klime_t *)fs_klime, (u64 *)file);
             return -1;
         }
@@ -258,7 +268,7 @@ static int wire_fd_to_pts(int fd_slot, int pty_idx)
 
 
     extern fs_file *fs_get_file(int fd);
-    extern void     fs_free_fd(int fd);
+    extern void fs_free_fd(int fd);
 
     /* free old entry if present */
     if (fs_get_file(fd_slot)) {
@@ -267,7 +277,8 @@ static int wire_fd_to_pts(int fd_slot, int pty_idx)
 
 
     extern int fs_set_fd(int fd, fs_file *f);
-    if (fs_set_fd(fd_slot, file) < 0) {
+    if (fs_set_fd(fd_slot, file) < 0)
+    {
         klime_free((klime_t *)fs_klime, (u64 *)file);
         return -1;
     }

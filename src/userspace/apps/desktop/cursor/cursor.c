@@ -4,35 +4,37 @@
 #include <sys/ioctl.h>
 #include <emx/fb.h>
 
-#define CW CUR_W
-#define CH CUR_H
+// all sprite data comes from data.h now
 
-// color config
-#define T 0x00000000u
-#define B 0xFF101010u
-#define W 0xFFFFFFFFu
+static cur_type_t g_cur_type = CUR_TYPE_NORMAL;
 
-static const unsigned int cur_px[CW * CH] =
-{
-    B,T,T,T,T,T,T,T,T,T,T,T,
-    B,B,T,T,T,T,T,T,T,T,T,T,
-    B,W,B,T,T,T,T,T,T,T,T,T,
-    B,W,W,B,T,T,T,T,T,T,T,T,
-    B,W,W,W,B,T,T,T,T,T,T,T,
-    B,W,W,W,W,B,T,T,T,T,T,T,
-    B,W,W,W,W,W,B,T,T,T,T,T,
-    B,W,W,W,W,W,W,B,T,T,T,T,
-    B,W,W,W,W,W,W,W,B,T,T,T,
-    B,W,W,W,W,W,W,W,W,B,T,T,
-    B,W,W,W,W,W,W,W,W,W,B,T,
-    B,W,W,W,W,B,B,B,B,B,B,T,
-    B,W,W,W,B,T,T,T,T,T,T,T,
-    B,W,W,B,T,T,T,T,T,T,T,T,
-    B,W,B,T,T,T,T,T,T,T,T,T,
-    B,B,T,T,T,T,T,T,T,T,T,T,
-};
+// returns active sprite
+static const unsigned int *cur_px_active(void) {
+    switch (g_cur_type) {
+        case CUR_TYPE_HRESIZE: return cur_hresize_px;
+        case CUR_TYPE_VRESIZE: return cur_vresize_px;
+        case CUR_TYPE_DRESIZE_NWSE: return cur_dresize_nwse_px;
+        case CUR_TYPE_DRESIZE_NESW: return cur_dresize_nesw_px;
+        default: return cur_normal_px;
+    }
+}
 
-static unsigned int bg_save[CW * CH];
+int cur_w(void) {
+    if (g_cur_type == CUR_TYPE_NORMAL) return CUR_NORMAL_W;
+    return CUR_RESIZE_W;
+}
+
+int cur_h(void) {
+    if (g_cur_type == CUR_TYPE_NORMAL) return CUR_NORMAL_H;
+    return CUR_RESIZE_H;
+}
+
+void cur_set_type(cur_type_t type) {
+    g_cur_type = type;
+}
+
+// bg save buffer big enough for largest cursor
+static unsigned int bg_save[CUR_RESIZE_W * CUR_RESIZE_H];
 static int bg_valid = 0;
 static int old_x = 0;
 static int old_y = 0;
@@ -42,10 +44,12 @@ static int g_scr_h = 0;
 
 static void clamp(int *x, int *y)
 {
+    int cw = cur_w();
+    int ch = cur_h();
     if (*x < 0) *x = 0;
     if (*y < 0) *y = 0;
-    if (*x + CW > g_scr_w) *x = g_scr_w - CW;
-    if (*y + CH > g_scr_h) *y = g_scr_h - CH;
+    if (*x + cw > g_scr_w) *x = g_scr_w - cw;
+    if (*y + ch > g_scr_h) *y = g_scr_h - ch;
 }
 
 void cur_init(int fb_fd, int w, int h)
@@ -59,21 +63,25 @@ void cur_init(int fb_fd, int w, int h)
 void cur_undo_from_backbuf(void)
 {
     if (!bg_valid) return;
-    comp_put_pixels(old_x, old_y, CW, CH, bg_save);
+    comp_put_pixels(old_x, old_y, cur_w(), cur_h(), bg_save);
 }
 
 void cur_bake(int x, int y)
 {
+    int cw = cur_w();
+    int ch = cur_h();
+    const unsigned int *px = cur_px_active();
+
     clamp(&x, &y);
 
-    for (int row = 0; row < CH; row++) {
-        for (int col = 0; col < CW; col++) {
-            bg_save[row * CW + col] = comp_get(x + col, y + row);
+    for (int row = 0; row < ch; row++) {
+        for (int col = 0; col < cw; col++) {
+            bg_save[row * cw + col] = comp_get(x + col, y + row);
         }
     }
-    for (int row = 0; row < CH; row++) {
-        for (int col = 0; col < CW; col++) {
-            unsigned int c = cur_px[row * CW + col];
+    for (int row = 0; row < ch; row++) {
+        for (int col = 0; col < cw; col++) {
+            unsigned int c = px[row * cw + col];
             if (c >> 24) comp_set(x + col, y + row, c);
         }
     }
@@ -89,8 +97,8 @@ void cur_erase_fb(void)
     fb_rect_t r = {
         .x      = (unsigned)old_x,
         .y      = (unsigned)old_y,
-        .w      = CW,
-        .h      = CH,
+        .w      = (unsigned)cur_w(),
+        .h      = (unsigned)cur_h(),
         .pixels = bg_save
     };
     ioctl(g_fd, FBIO_BLIT, &r);
@@ -100,14 +108,19 @@ void cur_erase_fb(void)
 void cur_draw_fb(int x, int y)
 {
     if (g_fd < 0) return;
+
+    int cw = cur_w();
+    int ch = cur_h();
+    const unsigned int *px = cur_px_active();
+
     clamp(&x, &y);
 
     // save FB pixels under the cursor
     fb_rect_t save = {
         .x      = (unsigned)x,
         .y      = (unsigned)y,
-        .w      = CW,
-        .h      = CH,
+        .w      = (unsigned)cw,
+        .h      = (unsigned)ch,
         .pixels = bg_save
     };
     ioctl(g_fd, FBIO_READ_RECT, &save);
@@ -116,9 +129,9 @@ void cur_draw_fb(int x, int y)
     fb_rect_t draw = {
         .x      = (unsigned)x,
         .y      = (unsigned)y,
-        .w      = CW,
-        .h      = CH,
-        .pixels = (unsigned int *)cur_px
+        .w      = (unsigned)cw,
+        .h      = (unsigned)ch,
+        .pixels = (unsigned int *)px
     };
 
     ioctl(g_fd, FBIO_BLIT, &draw);

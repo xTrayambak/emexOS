@@ -27,11 +27,18 @@ static void buf_char(int bx, char c, unsigned int fg, unsigned int bg, int frow)
     }
 }
 
-static void buf_str(
-	int bx, const char *s,
+/*writes string into row_buf  */
+static void buf_str_clamped(
+    int bx, int maxw, const char *s,
     unsigned int fg, unsigned int bg, int frow
 ) {
-    while (*s) { buf_char(bx, *s++, fg, bg, frow); bx += DT_FW; }
+    int px = bx;
+    while (*s)
+    {
+        if (px - bx >= maxw) break;
+        buf_char(px, *s++, fg, bg, frow);
+        px += DT_FW;
+    }
 }
 
 static void flush_row(int x, int y, int w) {
@@ -106,7 +113,14 @@ void render_win(dt_win_t *w)
 
     //int has_title = !(style & DT_NOTITLE);
     int tw = slen(w->title) * DT_FW;
+
+    // clamp title width so it fits inside the window
+    int title_area = ww - DT_CLOSE_X - DT_CLOSE_SZ - 4 - 4;
+    if (tw > title_area) tw = title_area;
+
     int tx = (ww - tw) / 2;
+    if (tx < DT_CLOSE_X + DT_CLOSE_SZ + 2) tx = DT_CLOSE_X + DT_CLOSE_SZ + 2;
+
     int sl = tx - 4;
     int sr = tx + tw + 4;
 
@@ -139,7 +153,7 @@ void render_win(dt_win_t *w)
 
             if (ww - 2 < ROW_MAX) row_buf[ww - 2] = row_buf[ww - 1] = DT_BLACK;
 
-            if (frow >= 0 && frow < DT_FH) buf_str(tx, w->title, DT_TITLE_TXT, title_bg, frow);
+            if (frow >= 0 && frow < DT_FH) buf_str_clamped(tx, tw + DT_FW, w->title, DT_TITLE_TXT, title_bg, frow);
 
             // close button
             {

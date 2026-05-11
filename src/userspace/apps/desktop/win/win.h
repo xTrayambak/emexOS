@@ -1,6 +1,7 @@
 #pragma once
 
 #include <sys/types.h>
+#include "../config/cfg.h"
 
 #define DT_WIN      0x00
 #define DT_POPUP    0x01
