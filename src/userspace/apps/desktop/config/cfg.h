@@ -15,6 +15,8 @@
 #define DT_LIGHT     0xFFDFDFDFu
 #define DT_SHADOW    0xFF808080u
 
+#define DT_ENABLE_RESIZING 0
+
 // window title bar
 #define DT_TITLE_ACT 0xFF000080u  // when focused
 #define DT_TITLE_INA 0xFF808080u  // when unfocused

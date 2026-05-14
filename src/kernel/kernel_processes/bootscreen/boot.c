@@ -1,4 +1,5 @@
 #include "boot.h"
+#include "print.h"
 #include <kernel/communication/serial.h>
 #include <kernel/graph/graphics.h>
 
@@ -25,6 +26,10 @@ void bs_init_screens(void)
 		bs_screens[i].cursor_x = 0;
 		bs_screens[i].cursor_y = 0;
 		bs_screens[i].buffer = bs_buffers[i];
+	    bs_screens[i].x = 0;
+	    bs_screens[i].y = 0;
+	    bs_screens[i].width = get_fb_width();
+	    bs_screens[i].height = get_fb_height();
 	}
 }
 
@@ -49,6 +54,16 @@ void bs_switch(int id)
     memcpy(fb, bs_screens[id].buffer, bs_pdw * bs_fbh * sizeof(u32));
     log("[BOOTSCREEN]", buffer, _d);
     //print("\n", white());
+}
+
+void bs_set_region(int id, u32 x, u32 y, u32 w, u32 h)
+{
+    if (id < 0 || id >= BS_MAX_SCREENS) return;
+
+    bs_screens[id].x = x;
+    bs_screens[id].y = y;
+    bs_screens[id].width = w;
+    bs_screens[id].height = h;
 }
 
 bs_screen_t* bs_get_active(void)
@@ -180,7 +195,35 @@ kproc_t bootscreen_proc =
     .fini     = bs_fini,
 };
 
-void init_bootscreen(void) {
+void init_bootscreen(void)
+{
     bs_init_screens();
+
+    u32 w = get_fb_width();
+    u32 h = get_fb_height();
+
+    bs_set_region(  BS1,
+    	0,
+     	0,
+      	w / 2,
+       	h
+    );
+    bs_set_region(  BS2,
+        w / 2,
+        0,
+        w / 2,
+        h
+    );
+    bs_set_region(  BS3,
+    	0,
+     	0,
+      	w,
+       	h
+    );
+
+    bs_switch(BS2);
+    print("test", white());
+    bs_switch(BS1);
+
     kproc_register_and_start(&bootscreen_proc);
 }

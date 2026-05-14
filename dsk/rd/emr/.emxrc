@@ -1,4 +1,4 @@
-var gui = 1 // the variable just needs to exist to work
+//var gui = 1 // the variable just needs to exist to work
 //var ebl = 1
 
 var lsblk       = ("/bin/lsblk.elf")

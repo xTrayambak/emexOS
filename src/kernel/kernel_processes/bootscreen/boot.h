@@ -15,6 +15,10 @@ extern kproc_t bootscreen_proc;
 typedef struct {
 	u32 cursor_x;
 	u32 cursor_y;
+	u32 x;
+	u32 y;
+	u32 width;
+	u32 height;
 	u32 *buffer; // opt. buffering
 } bs_screen_t;
 
@@ -25,6 +29,7 @@ extern int bs_active;
 void init_bootscreen(void);
 void bs_init_screens(void);
 void bs_switch(int id);
+void bs_set_region(int id, u32 x, u32 y, u32 w, u32 h);
 bs_screen_t* bs_get_active(void);
 
 /* backbuffer API used by print.c */

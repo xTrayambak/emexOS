@@ -169,19 +169,21 @@ static int handle_one(mouse_event_t *ev, input_state_t *is)
                 }
             } else if (edge != RESIZE_NONE && !(win_get(top_idx) && (win_get(top_idx)->style & DT_NOMOVE) && edge == RESIZE_NONE))
             {
-                // start resize
-                dt_win_t *wn = win_get(top_idx);
-                if (wn) {
-                    g_resize_idx  = top_idx;
-                    g_resize_edge = edge;
-                    g_resize_sx   = mx;
-                    g_resize_sy   = my;
-                    g_resize_wx   = wn->x;
-                    g_resize_wy   = wn->y;
-                    g_resize_ww   = wn->w;
-                    g_resize_wh   = wn->h;
-                    cur_set_type(edge_to_cursor(edge));
-                }
+            	#if DT_ENABLE_RESIZING
+	            	// start resize
+	                dt_win_t *wn = win_get(top_idx);
+	                if (wn) {
+	                    g_resize_idx  = top_idx;
+	                    g_resize_edge = edge;
+	                    g_resize_sx   = mx;
+	                    g_resize_sy   = my;
+	                    g_resize_wx   = wn->x;
+	                    g_resize_wy   = wn->y;
+	                    g_resize_ww   = wn->w;
+	                    g_resize_wh   = wn->h;
+	                    cur_set_type(edge_to_cursor(edge));
+	                }
+                #endif
             } else if (win_hit_title(top_idx, mx, my))
             {
                 dt_win_t *wn = win_get(top_idx);
@@ -208,20 +210,21 @@ static int handle_one(mouse_event_t *ev, input_state_t *is)
     }
 
     // button release
-    if (!btn)
+    if (!btn && g_last_btn)
     {
+        // always flag changed on any release so compositor sees the state change
+        changed = 1;
+
         if (g_resize_idx >= 0)
         {
             g_resize_idx  = -1;
             g_resize_edge = RESIZE_NONE;
             cur_set_type(CUR_TYPE_NORMAL);
-            changed = 1;
         }
         if (g_band_active)
         {
             g_band_active = 0;
             is->sel_active = 0;
-            changed = 1;
         }
         g_drag_idx = -1;
     }

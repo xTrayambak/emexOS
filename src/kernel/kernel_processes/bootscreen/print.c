@@ -174,8 +174,10 @@ static void putchar_at(u32 codepoint, u32 x, u32 y, u32 color)
         for (u32 sy = 0; sy < font_scale; sy++)
         {
             u32 abs_y = y + dy * font_scale + sy;
+            u32 real_x = bs_get_active()->x + x;
+            u32 real_y = bs_get_active()->y + abs_y;
             memcpy(
-                backbuf + abs_y * pdw + x,
+                backbuf + real_y * pdw + real_x,
                 g_scanline,
                 glyph_w * sizeof(u32)
             );
@@ -186,21 +188,34 @@ static void putchar_at(u32 codepoint, u32 x, u32 y, u32 color)
     dirty_mark(y, glyph_h);
 }
 
-static void bs_scroll(u32 line_height)
+static void bs_scroll(bs_screen_t *scr, u32 line_height)
 {
-    u32 fb_h 	= bs_backbuf_height();
+    //u32 fb_h 	= bs_backbuf_height();
     u32 pdw  	= bs_backbuf_pitch_dw();
     u32 *buf  = bs_backbuf_get();
+    u32 start_x = scr->x;
+    u32 start_y = scr->y;
+    u32 width   = scr->width;
+    u32 height  = scr->height;
 
-    memmove(
-    	buf, buf + line_height * pdw,
-        (fb_h - line_height) * pdw * sizeof(u32)
-    );
-    memset(
-    	buf + (fb_h - line_height) * pdw, 0,
-    	line_height * pdw * sizeof(u32)
-    );
-    bs_backbuf_flush_all();
+    for (u32 y = 0; y < height - line_height; y++)
+    {
+        memcpy(
+            buf + (start_y + y) * pdw + start_x,
+            buf + (start_y + y + line_height) * pdw + start_x,
+            width * sizeof(u32)
+        );
+    }
+    for (u32 y = height - line_height; y < height; y++)
+    {
+        memset(
+            buf + (start_y + y) * pdw + start_x,
+            0,
+            width * sizeof(u32)
+        );
+    }
+    bs_flush_rect(start_x, start_y, width, height);
+    //bs_backbuf_flush_all();
 
     dirty_reset();
 }
@@ -208,6 +223,8 @@ static void bs_scroll(u32 line_height)
 static void putcodepoint(u32 codepoint, u32 color)
 {
 	bs_screen_t *src = bs_get_active();
+	u32 region_w = src->width;
+	u32 region_h = src->height;
     u32 char_width  = fm_get_char_width() * font_scale;
     u32 char_height = fm_get_char_height() * font_scale;
     u32 char_spacing = char_width;
@@ -220,21 +237,21 @@ static void putcodepoint(u32 codepoint, u32 color)
         src->cursor_x = 0;
         src->cursor_y += line_height;
         // scroll only once, right here
-        if (src->cursor_y + char_height > fb_height) {
-            bs_scroll(line_height);
+        if (src->cursor_y + char_height > region_h) {
+        	bs_scroll(src, line_height);
             src->cursor_y -= line_height;
         }
         //log_printf(d, "CURSOR", "AFTER y=%d\n", src->cursor_y);
         return;
     }
 
-    if (bs_get_active()->cursor_x + char_width >= fb_width)
+    if (src->cursor_x + char_width >= region_w)
     {
         bs_get_active()->cursor_x = 0;
         bs_get_active()->cursor_y += line_height;
         // scroll only once, right here
-        if (bs_get_active()->cursor_y + char_height > fb_height) {
-            bs_scroll(line_height);
+        if (src->cursor_y + char_height > region_h) {
+        	bs_scroll(src, line_height);
             bs_get_active()->cursor_y -= line_height;
         }
     }

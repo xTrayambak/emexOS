@@ -64,31 +64,81 @@ static void builtin_exec(char **argv)
         return;
     }
 
-    const char *path = argv[1];
+    int bg = 0;
+    int arg_start = 1;
+    if (strcmp(argv[1], "-bg") == 0) {
+        bg = 1;
+        arg_start = 2;
+    }
+
+    if (!argv[arg_start]) {
+        printf("exec: missing path\n");
+        return;
+    }
+
     char *const envp[] = { (char *)0 };
 
-    // check if it ends with .emx
-    size_t len = strlen(path);
-    int is_emx = (len > 4 && strcmp(path + len - 4, ".emx") == 0);
+    for (int i = arg_start; argv[i]; i++)
+    {
+        pid_t pid = fork();
 
-    pid_t pid = fork();
-    if (pid == 0) {
-        if (is_emx) {
-            execve(path, argv + 1, envp);
-        } else {
-            execve(path, argv + 1, envp);
+        if (pid == 0) {
+            char *child_argv[] = { argv[i], NULL };
+
+            execve(argv[i], child_argv, envp);
+
+            printf("exec: failed to run: %s\n", argv[i]);
+            _exit(1);
         }
-        printf("exec: failed to run: ");
-        printf(path);
-        printf("\n");
-        _exit(1);
-    } else if (pid > 0) {
-        waitpid(pid, NULL, 0);
-    } else {
-        printf("exec: fork failed\n");
+        else if (pid < 0) {
+            printf("exec: fork failed\n");
+            return;
+        }
+
+        if (!bg) {
+            waitpid(pid, NULL, 0);
+        }
     }
 }
 
+static void builtin_gui(void)
+{
+    char *const envp[] = { (char *)0 };
+
+    struct {
+        const char *path;
+        int bg;
+    } apps[] =
+    {
+        { "/emr/system/desktop.elf",  1 },
+        { "/emr/system/login.elf",    0 },
+        { "/emr/system/sysinfo.elf",  1 },
+        { "/emr/system/shelly.emx",   0 },
+        { NULL, 0 }
+    };
+
+    for (int i = 0; apps[i].path; i++)
+    {
+        pid_t pid = fork();
+
+        if (pid == 0)
+        {
+            char *argv[] = { (char *)apps[i].path, NULL };
+            execve(apps[i].path, argv, envp);
+
+            printf("gui: failed to run %s\n", apps[i].path);
+            _exit(1);
+        }
+        else if (pid < 0) {
+            printf("gui: fork failed\n");
+            return;
+        }
+
+        if (!apps[i].bg) {
+            waitpid(pid, NULL, 0);
+        }
+    }
+}
 int main(void)
 {
 	printf(WELCOME_MESSAGE);
@@ -114,10 +164,15 @@ int main(void)
         if (argc == 0) continue;
 
         builtins: {
-	        if (strcmp(argv[0], "exec") == 0) {
-	            builtin_exec(argv);
-	            continue;
-	        }
+            if (strcmp(argv[0], "exec") == 0) {
+                builtin_exec(argv);
+                continue;
+            }
+
+            if (strcmp(argv[0], "gui") == 0) {
+                builtin_gui();
+                continue;
+            }
         }
 
         int ret = exec_from_bin(argv[0], argv);
