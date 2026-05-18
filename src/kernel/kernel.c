@@ -106,7 +106,10 @@ klime_t *klime = NULL;
 // limine modules
 #include <kernel/modules/limine.h>
 #include <kernel/inits/init.h>
+#include <kernel/kernel.h>
+#include <kernel/mem/radix/radix.h>
 
+kglobal_t kglobal;
 
 void _start(void)
 {
@@ -181,6 +184,7 @@ void _start(void)
 
         // kernel lifetime
         klime_t *klime = klime_init((u64 *)HEAP_START, HEAP_SIZE);
+        kglobal.klime = klime;
 
         if (!framebuffer_request.response) {
             panic("Cant initialize glime limine response NULL");
