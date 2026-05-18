@@ -1,5 +1,5 @@
 #include "glime.h"
-#include <ui/fonts/font_8x8.h>
+#include <kernel/kernel_processes/bootscreen/localfont/font_8x8.h>
 #include <kernel/communication/serial.h>
 
 gsession_t *gsession_init(glime_t *glime, u8 *name, u64 width) {

@@ -1,10 +1,11 @@
-//var gui = 1 // the variable just needs to exist to work
+var gui = 1 // the variable just needs to exist to work
 //var ebl = 1
 
 var lsblk       = ("/bin/lsblk.elf")
 var stinf       = ("/emr/system/system.emx/stinf.elf")
 var desktop     = ("/emr/system/desktop.elf")
 var sysinfo     = ("/emr/system/sysinfo.elf")
+var filemanager = ("/emr/system/fm.elf")
 var bg_test     = ("/emr/system/sinfo.elf")
 var bg_test2    = ("/emr/system/libraries/cursor.elf")
 var login_path  = ("/emr/system/login.elf")
@@ -32,6 +33,7 @@ if gui
 
 	exec login_path
 	exec -bg sysinfo
+	//exec -bg filemanager
 	exec -f"ep" gshell_path
 else
 	//print("gui variable NOT found")

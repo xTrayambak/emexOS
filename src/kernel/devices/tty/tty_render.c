@@ -35,7 +35,12 @@ static void tty_render_cell(tty_cell_t *cell)
             break;
         }
         case TTY_CELL_CLEAR:
-            clear(bg());
+	    {
+		    clear(BS1, bg());
+		    clear(BS2, bg());
+		    clear(BS3, bg());
+		    clear(BS4, bg());
+	    }
             break;
         case TTY_CELL_HOME:
             bs_get_active()->cursor_x = 0;

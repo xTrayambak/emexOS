@@ -1,6 +1,7 @@
 #include "input.h"
 #include "../win/win.h"
 #include "../cursor/cursor.h"
+#include "../desktop_input_dispatch.h"
 
 #include <unistd.h>
 #include <emx/mouse.h>
@@ -25,6 +26,9 @@ static int g_resize_wh   	= 0;   // window h at resize start
 static int g_band_active = 0;
 static int g_band_sx = 0;
 static int g_band_sy = 0;
+
+static pid_t g_focused_pid = 0;
+static int g_focused_idx = -1;
 
 drag_info_t g_input_drag_prev;
 
@@ -97,6 +101,8 @@ void input_init(void)
     g_resize_edge = RESIZE_NONE;
     g_band_active = 0;
     g_input_drag_prev.valid = 0;
+    g_focused_pid = 0;
+    g_focused_idx = -1;
 }
 
 void input_frame_begin(input_state_t *is)
@@ -109,12 +115,14 @@ static int handle_one(mouse_event_t *ev, input_state_t *is)
     int mx = ev->abs_x;
     int my = ev->abs_y;
     int btn = ev->buttons & MOUSE_BTN_LEFT;
+    int rbtn = ev->buttons & MOUSE_BTN_RIGHT;
     int changed = 0;
 
     is->cx = mx;
     is->cy = my;
 
-    // update cursor type based on hover (when not dragging/resizing)
+    int focus_changed_this_event = 0;
+
     if (!btn && g_drag_idx < 0 && g_resize_idx < 0 && !g_band_active)
     {
         cur_type_t hov_cur = CUR_TYPE_NORMAL;
@@ -150,6 +158,15 @@ static int handle_one(mouse_event_t *ev, input_state_t *is)
         }
         if (top_idx >= 0)
         {
+            dt_win_t *tw = win_get(top_idx);
+            if (tw && tw->pid != g_focused_pid)
+            {
+                dt_clear_input(g_focused_pid);
+                g_focused_pid = tw->pid;
+                g_focused_idx = top_idx;
+                focus_changed_this_event = 1;
+            }
+
             win_focus(top_idx);
             changed = 1;
 
@@ -166,6 +183,10 @@ static int handle_one(mouse_event_t *ev, input_state_t *is)
                     g_input_drag_prev.ww    = wn->w;
                     g_input_drag_prev.wh    = wn->h;
                     win_remove(wn->pid);
+
+                    g_focused_pid = 0;
+                    g_focused_idx = -1;
+                    focus_changed_this_event = 1;
                 }
             } else if (edge != RESIZE_NONE && !(win_get(top_idx) && (win_get(top_idx)->style & DT_NOMOVE) && edge == RESIZE_NONE))
             {
@@ -209,28 +230,27 @@ static int handle_one(mouse_event_t *ev, input_state_t *is)
         }
     }
 
-    // button release
-    if (!btn && g_last_btn)
+    if (!btn)
     {
-        // always flag changed on any release so compositor sees the state change
-        changed = 1;
-
         if (g_resize_idx >= 0)
         {
             g_resize_idx  = -1;
             g_resize_edge = RESIZE_NONE;
             cur_set_type(CUR_TYPE_NORMAL);
+            changed = 1;
         }
         if (g_band_active)
         {
             g_band_active = 0;
             is->sel_active = 0;
+            changed = 1;
         }
         g_drag_idx = -1;
     }
 
     // drag move
-    if (btn && g_drag_idx >= 0) {
+    if (btn && g_drag_idx >= 0)
+    {
         int nx = mx - g_drag_ox;
         int ny = my - g_drag_oy;
         if (nx < 0) nx = 0;
@@ -322,6 +342,22 @@ static int handle_one(mouse_event_t *ev, input_state_t *is)
         is->sel_x1 = mx;
         is->sel_y1 = my;
         changed = 1;
+    }
+
+    if (g_focused_idx >= 0 && !focus_changed_this_event)
+    {
+        dt_win_t *fw = win_get(g_focused_idx);
+        if (fw && fw->pid == g_focused_pid)
+        {
+            unsigned char btns = 0;
+            if (btn)  btns |= DT_BTN_LEFT;
+            if (rbtn) btns |= DT_BTN_RIGHT;
+
+            dt_event_t mev;
+            if (
+            	dt_make_mouse_event(g_focused_idx, mx, my, btns, &mev)
+            ) dt_dispatch_event(g_focused_pid, &mev);
+        }
     }
 
     g_last_btn = btn;

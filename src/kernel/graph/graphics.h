@@ -29,7 +29,7 @@ u32* get_framebuffer(void);
 u32 get_fb_pitch(void);
 
 void reset_cursor(void);
-void clear(u32 color);
+void clear(int screen_id, u32 color);
 void scroll_up(u32 lines);
 
 void set_font_scale(u32 scale);

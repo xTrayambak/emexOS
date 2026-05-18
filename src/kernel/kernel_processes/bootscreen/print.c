@@ -148,6 +148,8 @@ static void putchar_at(u32 codepoint, u32 x, u32 y, u32 color)
 
     if (glyph_w > BS_GLYPH_ROW_MAX) glyph_w = BS_GLYPH_ROW_MAX;
 
+    bs_screen_t *scr = bs_get_active();
+
     for (u32 dy = 0; dy < char_height; dy++)
     {
         u32 row_bits = 0;
@@ -174,12 +176,17 @@ static void putchar_at(u32 codepoint, u32 x, u32 y, u32 color)
         for (u32 sy = 0; sy < font_scale; sy++)
         {
             u32 abs_y = y + dy * font_scale + sy;
-            u32 real_x = bs_get_active()->x + x;
-            u32 real_y = bs_get_active()->y + abs_y;
+            if (abs_y >= scr->height) break;
+            u32 copy_w = glyph_w;
+            if (x + copy_w > scr->width) {
+                if (x >= scr->width) break;
+                copy_w = scr->width - x;
+            }
+            // write at local coords into the screen's own buffer
             memcpy(
-                backbuf + real_y * pdw + real_x,
+            	backbuf + abs_y * pdw + x,
                 g_scanline,
-                glyph_w * sizeof(u32)
+                copy_w * sizeof(u32)
             );
         }
     }
@@ -190,31 +197,27 @@ static void putchar_at(u32 codepoint, u32 x, u32 y, u32 color)
 
 static void bs_scroll(bs_screen_t *scr, u32 line_height)
 {
-    //u32 fb_h 	= bs_backbuf_height();
-    u32 pdw  	= bs_backbuf_pitch_dw();
-    u32 *buf  = bs_backbuf_get();
-    u32 start_x = scr->x;
-    u32 start_y = scr->y;
-    u32 width   = scr->width;
-    u32 height  = scr->height;
+    u32 pdw    = scr->width; // local buffer stride
+    u32 *buf   = scr->buffer;
+    u32 width  = scr->width;
+    u32 height = scr->height;
+
+    if (!buf || !pdw) return;
 
     for (u32 y = 0; y < height - line_height; y++)
     {
         memcpy(
-            buf + (start_y + y) * pdw + start_x,
-            buf + (start_y + y + line_height) * pdw + start_x,
+            buf + y * pdw,
+            buf + (y + line_height) * pdw,
             width * sizeof(u32)
         );
     }
     for (u32 y = height - line_height; y < height; y++)
     {
-        memset(
-            buf + (start_y + y) * pdw + start_x,
-            0,
-            width * sizeof(u32)
-        );
+        memset(buf + y * pdw, 0, width * sizeof(u32));
     }
-    bs_flush_rect(start_x, start_y, width, height);
+
+    bs_flush_rect(0, 0, width, height);
     //bs_backbuf_flush_all();
 
     dirty_reset();
@@ -368,7 +371,7 @@ void reset_cursor(void)
 void print_to(int screen, const char *str, u32 color)
 {
 	int old = bs_active;
-	bs_switch(screen);
-	print(str,color);
-	bs_switch(old);
+	bs_active = screen;
+	string(str,color);
+	bs_active = old;
 }

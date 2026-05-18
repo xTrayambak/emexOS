@@ -59,13 +59,10 @@ $(ISO): limine.conf $(LIMINE_TOOL) buildgen $(BUILD_DIR)/kernel.elf disk userspa
 	@mkdir -p $(ISODIR)/boot/ui/fonts
 	@mkdir -p $(ISODIR)/boot/ui/assets
 	@mkdir -p $(ISODIR)/boot/modules
-	@mkdir -p $(ISODIR)/boot/keymaps
-	@mkdir -p $(ISODIR)/boot/images
-	@mkdir -p $(ISODIR)/boot/programs
-	@mkdir -p $(ISODIR)/boot/flags
-	@touch $(ISODIR)/boot/flags/install
 	@cp $(BUILD_DIR)/kernel.elf $(ISODIR)/boot/kernel_a.elf
 	@cp $(BUILD_DIR)/kernel.elf $(ISODIR)/boot/kernel_b.elf
+	@cp $(DISK_DIR)/logo.bin $(ISODIR)/boot/logo.bin
+	@cp tools/vad/test.bin $(ISODIR)/boot/test.bin
 	@cp $< $(ISODIR)/boot/limine/
 	@cp $(addprefix $(INCLUDE_DIR)/limine/limine-, bios.sys bios-cd.bin uefi-cd.bin) $(ISODIR)/boot/limine/
 	@cp $(addprefix $(INCLUDE_DIR)/limine/BOOT, IA32.EFI X64.EFI) $(ISODIR)/EFI/BOOT/
@@ -88,6 +85,8 @@ $(ISO): limine.conf $(LIMINE_TOOL) buildgen $(BUILD_DIR)/kernel.elf disk userspa
 	@cp -r src/userspace/apps/system/stinf/stinf.elf $(DISK_DIR)/rd/emr/system/system.emx
 	@cp -r src/userspace/apps/desktop/desktop.elf $(DISK_DIR)/rd/emr/system/
 	@cp -r src/userspace/apps/sysinfo/sysinfo.elf $(DISK_DIR)/rd/emr/system/
+	@cp -r src/userspace/apps/filemanager/fm.elf $(DISK_DIR)/rd/emr/system/
+	@cp -r src/userspace/apps/template/template.elf $(DISK_DIR)/rd/emr/system/
 
 	@echo "[MK] copying other binarys..."
 	# delete those using make binclean

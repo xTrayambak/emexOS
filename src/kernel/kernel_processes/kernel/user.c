@@ -77,7 +77,8 @@ void uproc(void) {
         //memlog_print_map();
 
         //first clear screen
-        clear(0xff000000);
+        clear(BS1, 0xff000000);
+        clear(BS2, 0xff000000);
         bs_switch(USER_SCREEN_MODE);
 
         dump_kprocesses();

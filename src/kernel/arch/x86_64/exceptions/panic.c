@@ -40,7 +40,12 @@ __attribute__((noreturn)) void panic(const char *message)
 	delay(10);
 
     setcontext(THEME_PANIC);
-    clear(PANIC_BG);
+    {
+	    clear(BS1, PANIC_BG);
+	    clear(BS2, PANIC_BG);
+	    clear(BS3, PANIC_BG);
+	    clear(BS4, PANIC_BG);
+    }
     f_setcontext(PANIC_FONT);
     // disable interrupts
     __asm__ volatile("cli");
@@ -88,7 +93,12 @@ __attribute__((noreturn)) void panic_exception(cpu_state_t *state, const char *m
 	delay(10);
 
     setcontext(THEME_PANIC);
-    clear(PANIC_BG);
+    {
+	    clear(BS1, PANIC_BG);
+	    clear(BS2, PANIC_BG);
+	    clear(BS3, PANIC_BG);
+	    clear(BS4, PANIC_BG);
+    }
     f_setcontext(PANIC_FONT);
     // Disable interrupts
     __asm__ volatile("cli");

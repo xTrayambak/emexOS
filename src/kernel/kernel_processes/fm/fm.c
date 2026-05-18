@@ -68,10 +68,10 @@ int f_setcontext(font_type_t font_type)
     // do not print font switch messages during panic
     if (getcontext() == THEME_PANIC) return 0;
 
-    BOOTUP_PRINT("[FM] ", GFX_GRAY_70);
-    BOOTUP_PRINT("switched to: ", white());
-    BOOTUP_PRINT(current_font->name, GFX_ST_CYAN);
-    BOOTUP_PRINT("\n", white());
+    //BOOTUP_PRINT("[FM] ", GFX_GRAY_70);
+    //BOOTUP_PRINT("switched to: ", white());
+    //BOOTUP_PRINT(current_font->name, GFX_ST_CYAN);
+    //BOOTUP_PRINT("\n", white());
 
     return 0;
 }

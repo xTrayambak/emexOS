@@ -18,6 +18,7 @@ LIBS := $(LIBS_D)/libfont/libfont.a       \
         $(LIBS_D)/emxfb0/libemxfb0.a
 
 OBJS := desktop.o \
+		desktop_input_dispatch.o \
         compositor/comp.o \
         cmd/cmd.o \
         bg/bg.o \
@@ -31,14 +32,15 @@ all: libs clean desktop.elf
 desktop.elf: $(OBJS) $(LIBC)/build/crt0.o $(LIBC)/build/libc.a $(LIBS)
 	$(LD) $(LDFLAGS) $(LIBC)/build/crt0.o $(OBJS) $(LIBS) $(LIBC)/build/libc.a -o $@
 
-desktop.o:          desktop.c           ; $(CC) $(CFLAGS) -c $< -o $@
-compositor/comp.o:  compositor/comp.c   ; $(CC) $(CFLAGS) -c $< -o $@
-bg/bg.o:            bg/bg.c             ; $(CC) $(CFLAGS) -c $< -o $@
-win/win.o:          win/win.c           ; $(CC) $(CFLAGS) -c $< -o $@
-cursor/cursor.o:    cursor/cursor.c     ; $(CC) $(CFLAGS) -c $< -o $@
-render/render.o:    render/render.c     ; $(CC) $(CFLAGS) -c $< -o $@
-input/input.o:      input/input.c       ; $(CC) $(CFLAGS) -c $< -o $@
-cmd/cmd.o:          cmd/cmd.c           ; $(CC) $(CFLAGS) -c $< -o $@
+desktop.o:          		desktop.c           		; $(CC) $(CFLAGS) -c $< -o $@
+compositor/comp.o:  		compositor/comp.c   		; $(CC) $(CFLAGS) -c $< -o $@
+bg/bg.o:           			bg/bg.c             		; $(CC) $(CFLAGS) -c $< -o $@
+win/win.o:          		win/win.c           		; $(CC) $(CFLAGS) -c $< -o $@
+desktop_input_dispatch.o: 	desktop_input_dispatch.c 	; $(CC) $(CFLAGS) -c $< -o $@
+cursor/cursor.o:    		cursor/cursor.c     		; $(CC) $(CFLAGS) -c $< -o $@
+render/render.o:    		render/render.c     		; $(CC) $(CFLAGS) -c $< -o $@
+input/input.o:      		input/input.c       		; $(CC) $(CFLAGS) -c $< -o $@
+cmd/cmd.o:          		cmd/cmd.c           		; $(CC) $(CFLAGS) -c $< -o $@
 
 $(LIBC)/build/crt0.o $(LIBC)/build/libc.a:
 	$(MAKE) -C $(LIBC)

@@ -1,12 +1,12 @@
 #include "fonts.h"
 #include "fonts/font_8x8.h"
 #include "fonts/font_8x8_bold.h"
-#include "fonts/font_8x16.h"
-#include "fonts/font_8x12_bold.h"
-#include "fonts/font_8x12.h"
-#include "fonts/font_8x16_bold.h"
-#include "fonts/font_16x32.h"
-#include "fonts/gohufont.h"
+//#include "fonts/font_8x16.h"
+//#include "fonts/font_8x12_bold.h"
+//#include "fonts/font_8x12.h"
+//#include "fonts/font_8x16_bold.h"
+//#include "fonts/font_16x32.h"
+//#include "fonts/gohufont.h"
 
 // font registery
 const font_t font_registry[FONT_COUNT] = {

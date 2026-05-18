@@ -1,17 +1,12 @@
 #pragma once
 
-// use | for combining
-#define DT_WIN      0x00  // n.window; titlebar; moveable
-#define DT_POPUP    0x01  // a popup window with no title bar and no close button (closing needs to be handled extern)
-#define DT_NOMOVE   0x02  // has titlebar but cant be dragged
-#define DT_NOTITLE  0x04  // no titlebar (thats why drag is there disabled)
+#include "dt_input.h"
 
-// example:
-// ( DT_NOMOVE | DT_NOTITLE )
-// is a unmoveable box; which is useful for panels
+#define DT_WIN     0x00
+#define DT_POPUP   0x01
+#define DT_NOMOVE  0x02
+#define DT_NOTITLE 0x04
 
-// needs to mach desktop.c/.h
-// the lib cant use desktop.h/.c
 #define DT_TITLE_H 18
 #define DT_BORDER  1
 
@@ -19,24 +14,16 @@ typedef struct {
     int x, y, w, h;
 } DesktopArea;
 
-// computes the content area for a window
-// passes to desktop.createWindow
 static inline DesktopArea desktopContentArea(
     int x, int y, int w, int h, unsigned int style)
 {
     DesktopArea a;
     if (style & DT_POPUP) {
-        // 1px border all around
-        a.x = x + 1;
-        a.y = y + 1;
-        a.w = w - 2;
-        a.h = h - 2;
+        a.x = x + 1; a.y = y + 1;
+        a.w = w - 2; a.h = h - 2;
     } else if (style & DT_NOTITLE) {
-        // 2px border
-        a.x = x + DT_BORDER;
-        a.y = y + DT_BORDER;
-        a.w = w - DT_BORDER * 2;
-        a.h = h - DT_BORDER * 2;
+        a.x = x + DT_BORDER;     a.y = y + DT_BORDER;
+        a.w = w - DT_BORDER * 2; a.h = h - DT_BORDER * 2;
     } else {
         // 2px border + 18px titlebar + 1px separator
         a.x = x + DT_BORDER;
@@ -47,8 +34,6 @@ static inline DesktopArea desktopContentArea(
     return a;
 }
 
-//the struct creates desktop. so you can use:
-// desktop.createWindow("title", x, y, w, h, DT_WIN);
 typedef struct {
 
     // register
@@ -57,21 +42,21 @@ typedef struct {
         int x, int y, int w, int h,
         unsigned int style
     );
+    int (*createPopup)(
+    	int x,
+     	int y,
+      	int w,
+       	int h
+    );
 
     // unregister
     void (*closeWindow)(void);
-    // update title
     void (*setTitle)(const char *title);
-
-
     void (*markDirty)(void);
-
-    // cursor position
-    int  (*getCursor)(int *x, int *y);
-
-    // write window pixel buffer (w x h ARGB pixels)
     void (*winbuf_write)(const unsigned int *pixels, int w, int h);
+    int (*pollEvents)(dt_event_t *buf, int max);
+    void (*getCurrentMousePos)(int *out_x, int *out_y);
 
 } Desktop;
 
-extern Desktop desktop; // desktop.
+extern Desktop desktop;

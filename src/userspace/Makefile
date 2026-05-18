@@ -13,6 +13,8 @@ all:
 	@$(MAKE) -C apps/login
 	@$(MAKE) -C apps/desktop
 	@$(MAKE) -C apps/sysinfo
+	@$(MAKE) -C apps/filemanager
+	@$(MAKE) -C apps/template
 
 	@$(MAKE) -C bin/echo
 	@$(MAKE) -C bin/hello
@@ -48,6 +50,8 @@ clean:
 	@$(MAKE) -C apps/login clean
 	@$(MAKE) -C apps/desktop clean
 	@$(MAKE) -C apps/sysinfo clean
+	@$(MAKE) -C apps/filemanager clean
+	@$(MAKE) -C apps/template clean
 
 	@$(MAKE) -C bin/echo clean
 	@$(MAKE) -C bin/hello clean

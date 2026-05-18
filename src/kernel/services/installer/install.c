@@ -7,6 +7,7 @@ int _ran = 0;
 #include <drivers/storage/ata/disk.h>
 #include <kernel/include/reqs.h>
 #include <kernel/communication/serial.h>
+#include <kernel/kernel_processes/bootscreen/boot.h>
 #include <kernel/graph/graphics.h>
 #include <memory/main.h>
 #include <limine/limine.h>
@@ -59,7 +60,12 @@ int installer_run(void)
     _ran = 1;
     if (!cmd_is("install")) return 0;
 
-    clear(bg());
+    {
+	    clear(BS1, bg());
+	    clear(BS2, bg());
+	    clear(BS3, bg());
+	    clear(BS4, bg());
+    }
     ip("\n  emexOS Installer\n", white());
     ip("\n\n", white());
 
