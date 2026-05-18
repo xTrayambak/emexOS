@@ -24,13 +24,15 @@ typedef struct {
     u8 data[IPC_MAX_MSG_SIZE];
     int used;
 } ipc_msg_t;
+
 typedef struct {
     int is_open;
     int count;
     ipc_msg_t *messages[IPC_MAX_MESSAGES];
     ulime_proc_t *waiters[IPC_MAX_WAITERS];
     int waiter_count;
-} ipc_endpoint_t;
+} ipc_port_t;
+
 typedef struct {
     u64 id;
     u64 phys_pages[IPC_MAX_SHM_PAGES];

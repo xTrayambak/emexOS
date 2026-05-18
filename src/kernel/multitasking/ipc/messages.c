@@ -6,13 +6,13 @@ extern klime_t *klime;
 
 #define MAX_MESSAGES 256
 
-static ipc_endpoint_t *endpoints[IPC_MAX_PROCS];
+static ipc_port_t *endpoints[IPC_MAX_PROCS];
 
 void ipc_messages_init(void) {
     for (int i = 0; i < IPC_MAX_PROCS; i++) endpoints[i] = NULL;
 }
 
-static ipc_endpoint_t *get_ep(u64 pid) {
+static ipc_port_t *get_ep(u64 pid) {
     if (pid >= IPC_MAX_PROCS) return NULL;
     return endpoints[pid];
 }
@@ -26,7 +26,7 @@ static ulime_proc_t *find_proc(ulime_t *ulime, u64 pid) {
     return NULL;
 }
 
-static void wake_waiters(ipc_endpoint_t *ep) {
+static void wake_waiters(ipc_port_t *ep) {
     for (int i = 0; i < ep->waiter_count; i++) {
         if (ep->waiters[i] && ep->waiters[i]->state == PROC_BLOCKED)
             ep->waiters[i]->state = PROC_READY;
@@ -44,7 +44,7 @@ void open_inbox(ulime_t *ulime, ulime_proc_t *proc)
         return;
     }
 
-    ipc_endpoint_t *ep = (ipc_endpoint_t *)klime_create(ulime->klime, sizeof(ipc_endpoint_t));
+    ipc_port_t *ep = (ipc_port_t *)klime_create(ulime->klime, sizeof(ipc_port_t));
     if (!ep) return;
 
     ep->is_open = 1;
@@ -57,14 +57,14 @@ void open_inbox(ulime_t *ulime, ulime_proc_t *proc)
 }
 
 void close_inbox(ulime_proc_t *proc) {
-    ipc_endpoint_t *ep = get_ep(proc->pid);
+    ipc_port_t *ep = get_ep(proc->pid);
     if (ep) ep->is_open = 0;
 }
 
 void destroy_endpoint(ulime_t *ulime, ulime_proc_t *proc)
 {
     u64 pid = proc->pid;
-    ipc_endpoint_t *ep = get_ep(pid);
+    ipc_port_t *ep = get_ep(pid);
     if (!ep) return;
 
     close_inbox(proc);
@@ -89,7 +89,7 @@ int send_msg(
 ) {
     if (!data || size == 0 || size > IPC_MAX_MSG_SIZE) return -1;
 
-    ipc_endpoint_t *ep = get_ep(receiver_id);
+    ipc_port_t *ep = get_ep(receiver_id);
     if (!ep || !ep->is_open) return -1;
 
     while (ep->count >= IPC_MAX_MESSAGES) {
@@ -121,7 +121,7 @@ int send_msg(
 
 int receive_async_msg(ulime_t *ulime, ulime_proc_t *proc, void *buf, u32 buf_size, u64 *out_sender)
 {
-    ipc_endpoint_t *ep = get_ep(proc->pid);
+    ipc_port_t *ep = get_ep(proc->pid);
     if (!ep || ep->count <= 0) return -1;
 
     ipc_msg_t *msg = ep->messages[0];
