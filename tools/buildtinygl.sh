@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 # made by @offihito
@@ -56,12 +56,17 @@ clean:
 .PHONY: all clean
 EOF
 
+SED="sed"
+if command -v gsed &> /dev/null; then
+	SED="gsed"
+fi
+
 # 3. Patch TinyGL to use system <math.h> headers
 echo ":: Patching TinyGL..."
 grep -l "#include <math.h>" src/*.c src/*.h | xargs sed -i 's/"math.h"/<math.h>/' || true
-gsed -i 's/static void gl_free/static inline void gl_free/' include/zbuffer.h
-gsed -i 's/static void\* gl_malloc/static inline void\* gl_malloc/' include/zbuffer.h
-gsed -i 's/static void\* gl_zalloc/static inline void\* gl_zalloc/' include/zbuffer.h
+$SED -i 's/static void gl_free/static inline void gl_free/' include/zbuffer.h
+$SED -i 's/static void\* gl_malloc/static inline void\* gl_malloc/' include/zbuffer.h
+$SED -i 's/static void\* gl_zalloc/static inline void\* gl_zalloc/' include/zbuffer.h
 
 echo ":: TinyGL porting setup complete."
 echo ":: To build libc and TinyGL, run: "

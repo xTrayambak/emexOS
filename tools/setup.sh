@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 DEPS_COMMON="nasm xorriso qemu git wget make"
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
