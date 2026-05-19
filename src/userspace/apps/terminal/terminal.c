@@ -12,14 +12,14 @@
 
 //-////////////////////////////////////////-//
 //-//                                    //-//
-//-//              SHELLY :)             //-//
+//-//             TERMINAL :)            //-//
 //-//       emex user-space shell        //-//
 //-//                                    //-//
 //-////////////////////////////////////////-//
 
 #define BUFFER 256
 #define SHELL_PROMPT "[pc@emexos]$ "
-#define SHELL_CONFIG "/.config/shelly/"
+#define SHELL_CONFIG "/.config/terminal/"
 #define BIN_PATH "/bin/"
 #define KBD_PATH "/dev/input/keyboard0"
 #define SHELL_W 700
@@ -249,7 +249,7 @@ static void run_cmd(void) {
     _exit(127);
   } else if (pid > 0) {
     waitpid(pid, NULL, 0);
-    
+
     // Drain child output from PTY master
     if (g_ptmx >= 0) {
         char pty_buf[512];
@@ -259,7 +259,7 @@ static void run_cmd(void) {
             buf_puts(pty_buf, CI_FG);
         }
     }
-    
+
     redraw();
   } else {
     buf_puts("fork failed\n", CI_ERR);
@@ -272,7 +272,7 @@ int main(void) {
   g_kbd = open(KBD_PATH, O_RDONLY);
   if (g_kbd < 0)
     return 1;
-    
+
   g_ptmx = open("/dev/ptmx", O_RDONLY);
 
   int scr_w = 1280, scr_h = 720;
@@ -283,7 +283,7 @@ int main(void) {
   if (win_y < 0)
     win_y = 0;
 
-  desktop.createWindow("shelly", win_x, win_y, SHELL_W, SHELL_H, DT_WIN);
+  desktop.createWindow("terminal", win_x, win_y, SHELL_W, SHELL_H, DT_WIN);
   DesktopArea ca = desktopContentArea(win_x, win_y, SHELL_W, SHELL_H, DT_WIN);
   exui_init(ca.w, ca.h);
 
@@ -292,7 +292,7 @@ int main(void) {
     memset(t_clr[i], 0, TBUF_COLS);
   }
 
-  buf_puts("shelly :3\n", CI_INFO);
+  buf_puts("terminal :3\n", CI_INFO);
   buf_puts("type \"ls /bin\" for available commands.\n\n", CI_FG);
   buf_puts("[pc@emexos]$ ", CI_PROMPT);
   redraw();

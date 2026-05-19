@@ -192,6 +192,21 @@ void amd64_init_optimizations(void) {
         printf("[AMD64] NX bit enabled\n");
     }
 
+    // Enable SSE and FPU
+    log("[AMD64]", "enabling SSE/FPU...\n", d);
+    u64 cr0, cr4;
+    __asm__ volatile("mov %%cr0, %0" : "=r"(cr0));
+    cr0 &= ~(1 << 2); // clear EM (emulation)
+    cr0 |= (1 << 1);  // set MP (monitor coprocessor)
+    __asm__ volatile("mov %0, %%cr0" :: "r"(cr0));
+
+    __asm__ volatile("mov %%cr4, %0" : "=r"(cr4));
+    cr4 |= (1 << 9);  // set OSFXSR (FXSAVE/FXRSTOR support)
+    cr4 |= (1 << 10); // set OSXMMEXCPT (SIMD exception support)
+    __asm__ volatile("mov %0, %%cr4" :: "r"(cr4));
+
+    // initialize FPU
+    __asm__ volatile("fninit");
 
     // saftey checks
     if (edx & AMD_FEATURE_SYSCALL) {

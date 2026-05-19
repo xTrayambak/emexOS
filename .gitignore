@@ -25,6 +25,10 @@ logo.txt
 
 src/kernel/console/functions/edit.c
 
+**/tinygl/
+src/userspace/libs/tinygl/
+src/userspace/libs/tinygl/*
+
 tmp/
 
 dsk/disk.img

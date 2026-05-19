@@ -113,7 +113,7 @@ static void builtin_gui(void)
         { "/emr/system/desktop.elf",  1 },
         { "/emr/system/login.elf",    0 },
         { "/emr/system/sysinfo.elf",  1 },
-        { "/emr/system/shelly.emx",   0 },
+        { "/emr/system/terminal.emx", 0 },
         { NULL, 0 }
     };
 

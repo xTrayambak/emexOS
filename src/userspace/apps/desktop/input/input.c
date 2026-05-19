@@ -107,7 +107,8 @@ void input_init(void)
 
 void input_frame_begin(input_state_t *is)
 {
-    (void)is;
+	is->sel_px1 = is->sel_x1;
+    is->sel_py1 = is->sel_y1;
 }
 
 static int handle_one(mouse_event_t *ev, input_state_t *is)

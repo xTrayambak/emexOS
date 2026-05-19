@@ -32,6 +32,7 @@ typedef struct
     int sel_active;
     int sel_x0,  sel_y0;  	// start point
     int sel_x1,  sel_y1;  	// current end point
+    int sel_px1, sel_py1;   // previous end point
     int _sel_was_active; 	// tracks previous frame state for release clear
 } input_state_t;
 

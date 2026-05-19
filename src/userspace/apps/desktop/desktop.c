@@ -271,49 +271,50 @@ static void refresh_win_bufs(void)
 
 static void render_band(input_state_t *is)
 {
-    if (!is->sel_active) return;
+	/*
+	 * RUBBERBAND FIX
+		* by @offihito
+	 */
+	if (!is->sel_active) return;
 
-    // compute actual rect (supports all drag directions)
-    int x0 = is->sel_x0 < is->sel_x1 ? is->sel_x0 : is->sel_x1;
-    int y0 = is->sel_y0 < is->sel_y1 ? is->sel_y0 : is->sel_y1;
-    int x1 = is->sel_x0 > is->sel_x1 ? is->sel_x0 : is->sel_x1;
-    int y1 = is->sel_y0 > is->sel_y1 ? is->sel_y0 : is->sel_y1;
-    int w = x1 - x0;
-    int h = y1 - y0;
+	// compute actual rect (supports all drag directions)
+	int x0 = is->sel_x0 < is->sel_x1 ? is->sel_x0 : is->sel_x1;
+	int y0 = is->sel_y0 < is->sel_y1 ? is->sel_y0 : is->sel_y1;
+	int x1 = is->sel_x0 > is->sel_x1 ? is->sel_x0 : is->sel_x1;
+	int y1 = is->sel_y0 > is->sel_y1 ? is->sel_y0 : is->sel_y1;
+	int w = x1 - x0;
+	int h = y1 - y0;
 
-    if (w < 2 || h < 2) return;
+	if (w < 2 || h < 2) return;
 
-    int sw = comp_w();
-    int sh = comp_h();
+	int sw = comp_w();
+	int sh = comp_h();
 
-    for (int ry = y0 + 1; ry < y1 && ry < sh; ry++)
-    {
-        for (int rx = x0 + 1; rx < x1 && rx < sw; rx++)
-        {
-            unsigned int bg = comp_get(rx, ry);
-            // simple alpha blend: 80% bg + 20% blue
-            unsigned int br = (bg >> 16) & 0xFF;
-            unsigned int bg2 = (bg >> 8) & 0xFF;
-            unsigned int bb = bg & 0xFF;
-            br = (br * 4 + 0 * 1) / 5;
-            bg2 = (bg2 * 4 + 0 * 1) / 5;
-            bb = (bb * 4 + 255 * 1) / 5;
-            comp_set(rx, ry, 0xFF000000u | (br << 16) | (bg2 << 8) | bb);
-        }
-    }
+	for (int ry = y0 + 1; ry < y1 && ry < sh; ry++) {
+		for (int rx = x0 + 1; rx < x1 && rx < sw; rx++) {
+			unsigned int bg = comp_get(rx, ry);
+			// simple alpha blend: 80% bg + 20% blue
+			unsigned int br = (bg >> 16) & 0xFF;
+			unsigned int bg2 = (bg >> 8) & 0xFF;
+			unsigned int bb = bg & 0xFF;
 
-    // top and bottom edges
-    for (int rx = x0; rx <= x1 && rx < sw; rx++)
-    {
-        if (y0 >= 0  && y0 < sh)  comp_set(rx, y0,  BAND_BORDER);
-        if (y1 >= 0  && y1 < sh)  comp_set(rx, y1,  BAND_BORDER);
-    }
-    // left and right edges
-    for (int ry = y0; ry <= y1 && ry < sh; ry++)
-    {
-        if (x0 >= 0 && x0 < sw) comp_set(x0, ry, BAND_BORDER);
-        if (x1 >= 0 && x1 < sw) comp_set(x1, ry, BAND_BORDER);
-    }
+			br = (br * 4 + 0 * 1) / 5;
+			bg2 = (bg2 * 4 + 0 * 1) / 5;
+			bb = (bb * 4 + 255 * 1) / 5;
+			comp_set(rx, ry, 0xFF000000u | (br << 16) | (bg2 << 8) | bb);
+		}
+	}
+
+	// top and bottom edges
+	for (int rx = x0; rx <= x1 && rx < sw; rx++) {
+		if (y0 >= 0 && y0 < sh) comp_set(rx, y0, BAND_BORDER);
+		if (y1 >= 0 && y1 < sh) comp_set(rx, y1, BAND_BORDER);
+	}
+	// left and right edges
+	for (int ry = y0; ry <= y1 && ry < sh; ry++) {
+		if (x0 >= 0 && x0 < sw) comp_set(x0, ry, BAND_BORDER);
+		if (x1 >= 0 && x1 < sw) comp_set(x1, ry, BAND_BORDER);
+	}
 }
 
 int main(void)
@@ -358,6 +359,7 @@ int main(void)
     is._sel_was_active = 0;
     is.sel_x0 = 0; is.sel_y0 = 0;
     is.sel_x1 = 0; is.sel_y1 = 0;
+    is.sel_px1 = 0; is.sel_py1 = 0;
 
     cur_draw_fb(is.cx, is.cy);
     write_cursor_pos(is.cx, is.cy);
@@ -399,25 +401,28 @@ int main(void)
             need_full = 1;
             is.win_changed = 0;
         }
-        if (is._sel_was_active && !is.sel_active)
-        {
-            int x0 = is.sel_x0 < is.sel_x1 ? is.sel_x0 : is.sel_x1;
-            int y0 = is.sel_y0 < is.sel_y1 ? is.sel_y0 : is.sel_y1;
-            int x1 = is.sel_x0 > is.sel_x1 ? is.sel_x0 : is.sel_x1;
-            int y1 = is.sel_y0 > is.sel_y1 ? is.sel_y0 : is.sel_y1;
-            bg_draw_rect(x0, y0, x1 - x0 + 1, y1 - y0 + 1);
-            need_full = 1;
-        }
-        if (is.sel_active) need_full = 1;
-        //if (is._sel_was_active && !is.sel_active) need_full = 1;
+
+        int was_active = is._sel_was_active;
         is._sel_was_active = is.sel_active;
+
+        if (is.sel_active || was_active) need_full = 1;
 
         if (need_full)
         {
-            //if (app_dirty) refresh_win_bufs();
             refresh_win_bufs();
             comp_capture();
             cur_undo_from_backbuf();
+
+            // rubberband fix; @offihito
+            if (was_active)
+            {
+              int x0 = is.sel_x0 < is.sel_px1 ? is.sel_x0 : is.sel_px1;
+              int y0 = is.sel_y0 < is.sel_py1 ? is.sel_y0 : is.sel_py1;
+              int x1 = is.sel_x0 > is.sel_px1 ? is.sel_x0 : is.sel_px1;
+              int y1 = is.sel_y0 > is.sel_py1 ? is.sel_y0 : is.sel_py1;
+              bg_draw_rect(x0, y0, x1 - x0 + 1, y1 - y0 + 1);
+            }
+
             sync_home_to_current();
             clear_cmd_rects(&cr);
             clear_closed_windows();

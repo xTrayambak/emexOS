@@ -1,6 +1,6 @@
 #pragma once
 /*BS2 config */
-#define ITPATH ""
+#define ISLPATH "logo.bin" /*information screen logo */
 
 // text configuration
 #define ARCH_TEXT			"Architecture: "

@@ -17,13 +17,13 @@ LIBS    := $(LIBS_D)/eXui/libexui.a           \
            $(LIBS_D)/libdesktop/libdesktop.a  \
            $(LIBS_D)/libfont/libfont.a
 
-all: libs clean shelly.emx/app.elf
+all: libs clean terminal.emx/app.elf
 
-shelly.emx/app.elf: shell.o $(LIBC)/build/crt0.o $(LIBC)/build/libc.a $(LIBS)
-	mkdir -p shelly.emx
-	$(LD) $(LDFLAGS) $(LIBC)/build/crt0.o shell.o $(LIBS) $(LIBC)/build/libc.a -o $@
+terminal.emx/app.elf: terminal.o $(LIBC)/build/crt0.o $(LIBC)/build/libc.a $(LIBS)
+	mkdir -p terminal.emx
+	$(LD) $(LDFLAGS) $(LIBC)/build/crt0.o terminal.o $(LIBS) $(LIBC)/build/libc.a -o $@
 
-shell.o: shell.c
+terminal.o: terminal.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(LIBC)/build/crt0.o $(LIBC)/build/libc.a:
@@ -35,6 +35,6 @@ libs:
 	$(MAKE) -C $(LIBS_D)/eXui
 
 clean:
-	rm -f *.o shelly.emx/app.elf
+	rm -f *.o terminal.emx/app.elf
 
 .PHONY: all libs clean

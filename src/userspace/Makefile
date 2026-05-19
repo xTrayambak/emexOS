@@ -4,17 +4,19 @@ all:
 	@$(MAKE) -C libs/libfont
 	@$(MAKE) -C libs/libdesktop
 	@$(MAKE) -C libs/eXui
+	@$(MAKE) -C libs/tinygl
 #@$(MAKE) -C libs/cursor
 
 	@$(MAKE) -C apps/system
 		@$(MAKE) -C apps/system/stinf
 	@$(MAKE) -C apps/shell
-	@$(MAKE) -C apps/guishell
+	@$(MAKE) -C apps/terminal
 	@$(MAKE) -C apps/login
 	@$(MAKE) -C apps/desktop
 	@$(MAKE) -C apps/sysinfo
 	@$(MAKE) -C apps/filemanager
 	@$(MAKE) -C apps/template
+	@$(MAKE) -C apps/gears
 
 	@$(MAKE) -C bin/echo
 	@$(MAKE) -C bin/hello
@@ -41,17 +43,19 @@ clean:
 	@$(MAKE) -C libs/libfont clean
 	@$(MAKE) -C libs/libdesktop clean
 	@$(MAKE) -C libs/eXui clean
+	@$(MAKE) -C libs/tinygl clean
 #@$(MAKE) -C libs/cursor clean
 
 	@$(MAKE) -C apps/system clean
 		@$(MAKE) -C apps/system/stinf clean
 	@$(MAKE) -C apps/shell clean
-	@$(MAKE) -C apps/guishell clean
+	@$(MAKE) -C apps/terminal
 	@$(MAKE) -C apps/login clean
 	@$(MAKE) -C apps/desktop clean
 	@$(MAKE) -C apps/sysinfo clean
 	@$(MAKE) -C apps/filemanager clean
 	@$(MAKE) -C apps/template clean
+	@$(MAKE) -C apps/gears clean
 
 	@$(MAKE) -C bin/echo clean
 	@$(MAKE) -C bin/hello clean

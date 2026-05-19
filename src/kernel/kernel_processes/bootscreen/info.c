@@ -12,7 +12,7 @@
 #include <config/system.h>
 #include <types.h>
 
-#define LOGO_MODULE_NAME "logo.bin"
+#define LOGO_MODULE_NAME ISLPATH
 #define LOGO_MIN_SIZE    9  // 8 header bytes + at least 1 pixel
 
 static struct limine_file *find_logo_module(void)

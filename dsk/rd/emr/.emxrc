@@ -9,7 +9,7 @@ var filemanager = ("/emr/system/fm.elf")
 var bg_test     = ("/emr/system/sinfo.elf")
 var bg_test2    = ("/emr/system/libraries/cursor.elf")
 var login_path  = ("/emr/system/login.elf")
-var gshell_path = (ep: "/emr/system/shelly.emx")
+var gshell_path = (ep: "/emr/system/terminal.emx")
 var shell_path  = (ep: "/emr/system/shell.emx")
 
 print("succesfully jumped into userspace...")
